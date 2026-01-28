@@ -1,0 +1,88 @@
+import type { BaseCodeItem } from '../types';
+
+export const baseCodeData: BaseCodeItem[] = [
+  // 생성AI
+  { id: 1, category: '생성AI', title: 'Visually-rich Document Understanding : 2025 Samsung AI Challenge', url: 'http://dacon.io/edu/507/', keywords: ['LLM'] },
+  { id: 2, category: '생성AI', title: '2025 Samsung Collegiate Programming Challenge : AI 챌린지', url: 'https://dacon.io/edu/487/', keywords: ['LLM', '멀티모달'] },
+  { id: 3, category: '생성AI', title: 'Unlocking Future Sales & Demographics', url: 'https://dacon.io/competitions/official/236546/codeshare/12683?page=1&dtype=recent', keywords: ['LLM'] },
+  { id: 4, category: '생성AI', title: '2025 금융 AI Challenge : 금융 AI 모델 경쟁', url: 'https://dacon.io/edu/505/', keywords: ['LLM'] },
+  { id: 5, category: '생성AI', title: '2025 SW중심대학 디지털 경진대회 : AI부문', url: 'https://dacon.io/edu/497/', keywords: ['알고리즘', 'NLP', '생성형AI', 'LLM'] },
+  { id: 6, category: '생성AI', title: '2025 Bias-A-Thon : Bias 대응 챌린지 <Track 2>', url: 'https://dacon.io/competitions/official/236487/codeshare', keywords: [] },
+  { id: 7, category: '생성AI', title: '2025 Bias-A-Thon : Bias 발견 챌린지 <Track 1>', url: 'https://dacon.io/competitions/official/236486/codeshare', keywords: [] },
+  { id: 8, category: '생성AI', title: 'SW마에스트로 제16기 프롬프트 엔지니어링 대회', url: 'https://dacon.io/competitions/official/236504/overview/description', keywords: ['ChatGPT'] },
+  { id: 9, category: '생성AI', title: '한솔테코 건설공사 사고 예방 및 대응책 생성 : 한솔데코 시즌3 AI 경진대회', url: 'https://dacon.io/competitions/official/236455/overview/description', keywords: ['LLM'] },
+  { id: 10, category: '생성AI', title: '한솔테코 건설공사 사고 예방 및 대응책 생성', url: 'https://dacon.io/competitions/official/236455/overview/description', keywords: ['LLM'] },
+  { id: 11, category: '생성AI', title: '한솔테코 도배 하자 질의 응답 처리 생성형 AI 경진대회', url: 'https://dacon.io/competitions/official/236216/overview/description', keywords: ['LLM'] },
+  { id: 12, category: '생성AI', title: '월간 데이콘 ChatGPT 활용 생성형 AI 경진대회', url: 'https://dacon.io/competitions/official/236071/overview/description', keywords: ['ChatGPT'] },
+  
+  // NLP
+  { id: 13, category: 'NLP', title: '월간데이콘 : 문맥 기반 문장 순서 예측 AI 경진대회', url: 'https://dacon.io/competitions/official/236489/codeshare', keywords: ['NLP'] },
+  
+  // 정형 데이터
+  { id: 14, category: '정형', title: '운수종사자 인지적 특성 데이터를 활용한 교통사고 위험 예측 AI 경진대회 (추론)', url: 'https://dacon.io/competitions/official/236607/codeshare/13147', keywords: ['추론', 'LightGBM'] },
+  { id: 15, category: '정형', title: '운수종사자 인지적 특성 데이터를 활용한 교통사고 위험 예측 AI 경진대회 (학습)', url: 'https://dacon.io/competitions/official/236607/codeshare/13146', keywords: ['학습', 'LightGBM'] },
+  { id: 16, category: '정형', title: '토스 NEXT ML CHALLENGE : 광고 클릭 예측(CTR) 모델 개발', url: 'https://www.dacon.io/edu/529/', keywords: ['알고리즘', '채용', '토스', '정형', 'CTR', '머신러닝', '분류'] },
+  { id: 17, category: '정형', title: '스마트 해운물류 x AI 미션 챌린지 : 스마트 항만 AGV 경로 최적화', url: 'https://dacon.io/edu/524', keywords: [] },
+  { id: 18, category: '정형', title: '스마트 해운물류 x AI 미션 챌린지 : 이상신호 감지 기반 비정상 작동 진단', url: 'https://dacon.io/edu/527', keywords: [] },
+  { id: 19, category: '정형', title: '식음업장 메뉴 수요 예측 AI 온라인 해커톤', url: 'https://dacon.io/competitions/official/236559/overview/description', keywords: ['시계열'] },
+  { id: 20, category: '정형', title: 'Jump AI 2025 : 제 3회 AI 신약개발 경진대회', url: 'https://dacon.io/competitions/official/236530/codeshare', keywords: [] },
+  { id: 21, category: '정형', title: 'Boost up AI 2025 : 신약 개발 경진대회', url: 'https://dacon.io/competitions/official/236518/codeshare', keywords: [] },
+  { id: 22, category: '정형', title: '2025 전력사용량 예측 AI 경진대회', url: 'https://dacon.io/edu/502/', keywords: ['알고리즘', '정형', '시계열', '에너지', 'SMAPE'] },
+  { id: 23, category: '정형', title: '데이콘 Basic 고객 지원 등급 분류 : 도움이 필요한 고객을 찾아라', url: 'https://dacon.io/edu/503/', keywords: ['정형', '분류', 'macro-f1', '데이콘베이직', '알고리즘'] },
+  { id: 24, category: '정형', title: '제 4회 ETRI 휴먼이해 인공지능 논문경진대회', url: 'https://dacon.io/competitions/official/236468/data', keywords: [] },
+  { id: 25, category: '정형', title: '데이콘 Basic : 스트레스 지수 예측 : 건강 데이터로 마음의 균형을 찾아라!', url: 'https://dacon.io/competitions/official/236526/codeshare', keywords: [] },
+  { id: 26, category: '정형', title: '학습자 수료 예측 AI 경진대회', url: 'https://dacon.io/edu/498/', keywords: ['정형', '분류', '알고리즘', '월간데이콘', 'F1-Score'] },
+  { id: 27, category: '정형', title: '사이버 공격 유형 예측 해커톤: 트래픽 속 위협을 식별하라!', url: 'https://dacon.io/competitions/official/236502/codeshare', keywords: [] },
+  { id: 28, category: '정형', title: '난임 환자 대상 임신 성공 확률 예측 AI 오프라인 해커톤', url: 'https://dacon.io/competitions/official/236476/codeshare/12293', keywords: [] },
+  { id: 29, category: '정형', title: '기업 성공 확률 예측 해커톤: 미래의 성공기업을 발굴하라!', url: 'https://dacon.io/competitions/official/236475/codeshare', keywords: [] },
+  { id: 30, category: '정형', title: '부동산 허위매물 분류 : 가짜를 색출하라!', url: 'https://dacon.io/edu/375', keywords: [] },
+  { id: 31, category: '정형', title: '난독화된 한글 리뷰 복원 AI 경진대회', url: 'https://dacon.io/edu/376', keywords: [] },
+  { id: 32, category: '정형', title: '선물 배송 경로 최적화 경진대회', url: 'https://dacon.io/edu/367', keywords: [] },
+  { id: 33, category: '정형', title: '전기차 가격 예측 해커톤: 데이터로 EV를 읽다', url: 'https://dacon.io/edu/359', keywords: [] },
+  { id: 34, category: '정형', title: '상수도 관망 이상 감지 AI 경진대회 기본학습', url: 'https://dacon.io/edu/357', keywords: ['이상치 탐지', '시계열'] },
+  { id: 35, category: '정형', title: '2024 생명연구자원 AI활용 경진대회 기본학습', url: 'https://dacon.io/edu/326', keywords: ['분류'] },
+  { id: 36, category: '정형', title: '제 2회 신약개발 AI 경진대회 기본학습', url: 'https://dacon.io/edu/318', keywords: ['회귀'] },
+  { id: 37, category: '정형', title: '2024 Samsung AI Challenge : Machine Learning Force Fields 기본학습', url: 'https://dacon.io/edu/308', keywords: ['회귀'] },
+  { id: 38, category: '정형', title: '2024 Samsung AI Challenge : Black-box Optimization 기본학습', url: 'https://dacon.io/edu/320', keywords: ['회귀'] },
+  { id: 39, category: '정형', title: 'FSI AIxData Challenge 기본학습', url: 'https://dacon.io/edu/321', keywords: ['분류', '생성'] },
+  { id: 40, category: '정형', title: '웹 기사 추천 AI 경진대회 기본학습', url: 'https://dacon.io/edu/283', keywords: ['추천 시스템'] },
+  { id: 41, category: '정형', title: '웹 광고 클릭률 예측 기본 학습', url: 'https://dacon.io/edu/276', keywords: ['회귀'] },
+  { id: 42, category: '정형', title: '연체 고객 탐지 기본 학습 (고등학생 AI경진대회 예선)', url: 'https://dacon.io/edu/121', keywords: ['분류'] },
+  { id: 43, category: '정형', title: '2024 고등학생 AI경진대회 제1회 제주 ❮본선❯', url: 'https://dacon.io/competitions/official/236215/codeshare/9620', keywords: ['분류'] },
+  { id: 44, category: '정형', title: '교통사고 피해 예측 기본 학습', url: 'https://dacon.io/edu/35', keywords: ['회귀'] },
+  { id: 45, category: '정형', title: '제주 특산물 가격 예측 AI 경진대회', url: 'https://dacon.io/competitions/official/236176/codeshare/9036', keywords: ['회귀'] },
+  { id: 46, category: '정형', title: '제1회 국민대학교 AI빅데이터 분석 경진대회', url: 'https://dacon.io/competitions/official/236170/codeshare/9008', keywords: ['추천 시스템'] },
+  { id: 47, category: '정형', title: 'HD현대 AI Challenge', url: 'https://dacon.io/competitions/official/236158/codeshare/8822', keywords: ['회귀'] },
+  { id: 48, category: '정형', title: '2023 Samsung AI Challenge : Machine Learning Force Fields', url: 'https://dacon.io/competitions/official/236133/codeshare/8688', keywords: ['회귀'] },
+  { id: 49, category: '정형', title: '제1회 신약개발 AI 경진대회', url: 'https://dacon.io/competitions/official/236127/codeshare/8634', keywords: ['회귀'] },
+  { id: 50, category: '정형', title: '고객 대출등급 분류 기본 학습', url: 'https://dacon.io/edu/46', keywords: ['분류'] },
+  { id: 51, category: '정형', title: '연체 고객 탐지 기본 학습', url: 'https://dacon.io/edu/121', keywords: ['분류'] },
+  { id: 52, category: '정형', title: '교통사고 피해 예측', url: 'https://dacon.io/edu/35', keywords: ['회귀'] },
+  { id: 53, category: '정형', title: '학습 플랫폼 이용자 구독 갱신 예측', url: 'https://dacon.io/edu/37', keywords: ['분류'] },
+  { id: 54, category: '정형', title: '자동차 보험사기 탐지 AI 해커톤', url: 'https://dacon.io/edu/280', keywords: ['분류'] },
+  
+  // 전처리
+  { id: 55, category: '전처리', title: '결측치 보간 챌린지 기본학습', url: 'https://dacon.io/edu/171', keywords: ['전처리보간'] },
+
+  // 데이터분석
+  { id: 56, category: '데이터분석', title: '경진대회 플랫폼 분석 1', url: 'https://dacon.io/edu/17', keywords: [] },
+  { id: 57, category: '데이터분석', title: '경진대회 플랫폼 분석 2', url: 'https://dacon.io/edu/17', keywords: [] },
+  { id: 58, category: '데이터분석', title: 'KPI 도출 아이디어 경진대회 기본학습', url: 'https://dacon.io/edu/195', keywords: [] },
+  { id: 59, category: '데이터분석', title: '이커머스 고객 세분화 분석 아이디어 경진대회', url: 'https://dacon.io/edu/142', keywords: [] },
+  { id: 60, category: '데이터분석', title: '2023 NH 투자증권 빅데이터 경진대회', url: 'https://dacon.io/competitions/official/236145/codeshare/8895', keywords: [] },
+  
+  // 비전
+  { id: 61, category: '비전', title: '2025 상반기 헥토 채용 AI 경진대회', url: 'https://dacon.io/edu/484/', keywords: ['채용', '알고리즘', '헥토', '비전', '분류'] },
+  { id: 62, category: '비전', title: '2025 인하 인공지능 챌린지', url: 'https://dacon.io/edu/488/', keywords: ['알고리즘', '언어', '이미지', '색채화'] },
+  { id: 63, category: '비전', title: '제1회 Medical AI (MAI) 경진대회', url: 'https://dacon.io/edu/339/', keywords: [] },
+  { id: 64, category: '비전', title: '이미지 분류 해커톤: 데이터 속 아이콘의 종류를 맞혀라!', url: 'https://dacon.io/edu/403', keywords: [] },
+  { id: 65, category: '비전', title: '월간데이콘 : 건설용 자갈 암석 종류 분류 AI 경진대회', url: 'https://dacon.io/edu/426/', keywords: [] },
+  { id: 66, category: '비전', title: '이미지 손실 부분 복원 AI 경진대회 기본학습', url: 'https://dacon.io/edu/354', keywords: ['복원'] },
+  { id: 67, category: '비전', title: '제 1회 Medical AI (MAI) 경진대회 기본학습', url: 'https://dacon.io/edu/339', keywords: ['회귀'] },
+  { id: 68, category: '비전', title: '저해상도 이미지 분류 AI 경진대회 기본학습', url: 'https://dacon.io/edu/196', keywords: ['분류'] },
+  { id: 69, category: '비전', title: '반도체 소자 이상 탐지 기본 학습', url: 'https://dacon.io/edu/139', keywords: ['이상 탐지'] },
+  { id: 70, category: '비전', title: '퍼즐 이미지 순서 예측 기본 학습', url: 'https://dacon.io/edu/125', keywords: ['분류'] },
+  { id: 71, category: '비전', title: '2023 Samsung AI Challenge : Camera-Invariant Domain Adaptation', url: 'https://dacon.io/competitions/official/236132/codeshare/8693', keywords: ['객체 분할'] },
+  { id: 72, category: '비전', title: '퍼즐 이미지 순서 예측 기본 학습 (중복)', url: 'https://dacon.io/edu/125', keywords: ['분류'] },
+  { id: 73, category: '비전', title: '2024 제 4회 Uni-DTHON 데이터톤', url: 'https://dacon.io/edu/352', keywords: ['Vision', '이미지 변환', 'PSNR'] }
+];
