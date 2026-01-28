@@ -21,6 +21,7 @@ import { rankerLectures } from './data/rankerLectures';
 import { GoogleGenAI, Type } from "@google/genai";
 import { staticBannerTexts, type BannerText } from './data/bannerTexts';
 import UpcomingCompetitionCard from './components/UpcomingCompetitionCard';
+import { daconApi } from './services/daconApi';
 
 const ITEMS_PER_PAGE = 27;
 const ITEMS_PER_PAGE_DAYSCHOOL = 24;
@@ -377,25 +378,22 @@ const App: React.FC = () => {
     const isInitialMount = useRef(true);
     const [isDetailFilterVisible, setIsDetailFilterVisible] = useState(true);
 
+    // FIX: Define handleToggleManual to fix "Cannot find name 'handleToggleManual'"
+    const handleToggleManual = useCallback(() => {
+        setIsManualVisible(prev => !prev);
+    }, []);
+
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
-
-            // Handle banner visibility (only shows at the very top)
             setIsBannerVisible(currentScrollY < 10);
-            
-            // Auto-hide header/filter logic
             if (currentScrollY < 10) {
-                // Always show at the top
                 setIsHeaderAndFilterVisible(true);
             } else if (currentScrollY > lastScrollY.current) {
-                // Scrolling Down: Hide header
                 setIsHeaderAndFilterVisible(false);
             } else {
-                // Scrolling Up: Show header
                 setIsHeaderAndFilterVisible(true);
             }
-            
             lastScrollY.current = currentScrollY;
         };
         window.addEventListener('scroll', handleScroll, { passive: true });
@@ -416,49 +414,32 @@ const App: React.FC = () => {
         const fetchBannerText = async () => {
             try {
                 const prompt = `You are a creative marketing copywriter for 'Dacon', a Korean AI and data science education platform. Generate a compelling banner text to attract users to our learning content. The banner has two parts: a main headline ('tagLine1') and a supporting slogan ('slogan'). The tagline should be short, catchy, and inspiring (around 2-5 Korean words). The slogan should be a bit more descriptive, highlighting the value of learning (around 5-10 Korean words). The response must be in Korean.`;
-
                 const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
+                    model: 'gemini-3-flash-preview',
                     contents: prompt,
                     config: {
                         responseMimeType: "application/json",
                         responseSchema: {
                             type: Type.OBJECT,
                             properties: {
-                                tagLine1: {
-                                    type: Type.STRING,
-                                    description: '메인 헤드라인 문구'
-                                },
-                                slogan: {
-                                    type: Type.STRING,
-                                    description: '부가적인 슬로건 문구'
-                                },
+                                tagLine1: { type: Type.STRING, description: '메인 헤드라인 문구' },
+                                slogan: { type: Type.STRING, description: '부가적인 슬로건 문구' },
                             },
                             required: ["tagLine1", "slogan"],
                         },
                     },
                 });
-
-                const jsonString = response.text.trim();
-                const generatedText = JSON.parse(jsonString);
-
+                const generatedText = JSON.parse(response.text.trim());
                 if (generatedText.tagLine1 && generatedText.slogan) {
-                    setBannerText({
-                        tagLine1: generatedText.tagLine1,
-                        tagLine2: "58% 특별할인", // Keep this as requested
-                        slogan: generatedText.slogan,
-                    });
+                    setBannerText({ tagLine1: generatedText.tagLine1, tagLine2: "58% 특별할인", slogan: generatedText.slogan });
                 } else {
-                    throw new Error("Invalid response format from Gemini");
+                    throw new Error("Invalid response format");
                 }
-
             } catch (error) {
-                console.error("Failed to fetch banner text from Gemini:", error);
-                // Fallback to the first static banner text if API fails
+                console.error("Failed to fetch banner text:", error);
                 setBannerText(staticBannerTexts[0]);
             }
         };
-
         fetchBannerText();
     }, []);
 
@@ -475,30 +456,20 @@ const App: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const [compResponse, dsResponse] = await Promise.all([
-                fetch('https://app.dacon.io/api/v1/competition/list?offset=0&range=10000'),
-                fetch('https://dev-app.dacon.io/api/v2/edu/getAllMainList')
+            const [result, dsResult] = await Promise.all([
+                daconApi.getCompetitions(),
+                daconApi.getEducationList()
             ]);
 
             // Competitions
-            let combinedCompetitions: Competition[] = [];
-            if (compResponse.ok) {
-                const result = await compResponse.json();
-                const apiCompetitions: Competition[] = (result.status === 1 && Array.isArray(result.data)) ? result.data : [];
-                combinedCompetitions = [...apiCompetitions];
-                const existingIds = new Set(apiCompetitions.map(c => c.cpt_id));
-                staticCompetitions.forEach(staticComp => {
-                    if (!existingIds.has(staticComp.cpt_id)) {
-                        combinedCompetitions.push(staticComp);
-                    }
-                });
-            } else {
-                console.warn(`Competition API call failed with status: ${compResponse.status}, using fallback data.`);
-                combinedCompetitions = staticCompetitions;
-            }
+            let combinedCompetitions: Competition[] = (result.status === 1 && Array.isArray(result.data)) ? result.data : [];
+            const existingIds = new Set(combinedCompetitions.map(c => c.cpt_id));
+            staticCompetitions.forEach(staticComp => {
+                if (!existingIds.has(staticComp.cpt_id)) combinedCompetitions.push(staticComp);
+            });
 
             const keywordCounts: { [key: string]: number } = {};
-            combinedCompetitions.forEach(c => c.keyword?.split('|').forEach(k => {
+            combinedCompetitions.forEach(c => (c.keyword || '').split('|').forEach(k => {
                 const trimmed = k.trim();
                 if (trimmed) keywordCounts[trimmed] = (keywordCounts[trimmed] || 0) + 1;
             }));
@@ -507,108 +478,66 @@ const App: React.FC = () => {
             setAllCompetitions(combinedCompetitions);
             setPopularKeywords(sortedKeywords);
 
-
-            // DaySchool, Hackathons, and Ranker Lectures
+            // Education Content
             let allLearningContent: DaySchoolCourse[] = [];
-            let dsSuccess = false;
-            if (dsResponse.ok) {
-                const dsResult = await dsResponse.json();
-                dsSuccess = true;
-                
-                // 1. Process 'projects' (Courses)
+            if (dsResult) {
                 if (dsResult.projects && Array.isArray(dsResult.projects.list)) {
                     allLearningContent = allLearningContent.concat(dsResult.projects.list.map((item: any): DaySchoolCourse => ({
                         project_id: parseInt(item.project_id, 10),
                         title: item.title.replace(/🎪$/, '').trim(),
                         summary_img_object_key: item.summary_img_object_key,
-                        difficulty: item.difficulty,
-                        status: item.status,
-                        stage_count: item.stage_count,
-                        updated_at: item.updated_at,
-                        created_at: item.created_at,
-                        duration_in_minutes: item.duration_in_minutes,
-                        tags: item.tags || [],
-                        participant_count: item.participant_count,
-                        link: `https://dacon.io/edu/${item.project_id}`,
-                        type: 'course',
+                        difficulty: item.difficulty, status: item.status, stage_count: item.stage_count,
+                        updated_at: item.updated_at, created_at: item.created_at, duration_in_minutes: item.duration_in_minutes,
+                        tags: item.tags || [], participant_count: item.participant_count,
+                        link: `https://dacon.io/edu/${item.project_id}`, type: 'course',
                     })));
                 }
-
-                // 2. Process 'hackathons'
                 if (dsResult.hackathons && Array.isArray(dsResult.hackathons.list)) {
-                    allLearningContent = allLearningContent.concat(dsResult.hackathons.list.map((item: any): DaySchoolCourse => {
-                        const isOngoing = new Date() <= new Date(item.period_end);
-                        return {
-                            project_id: parseInt(item.cpt_id, 10),
-                            title: item.title,
-                            summary_img_object_key: '',
-                            difficulty: '중급', status: isOngoing ? 'OPEN' : 'ENDED', stage_count: '1',
-                            updated_at: item.period_end, created_at: item.period_start, duration_in_minutes: '120',
-                            tags: item.keyword ? item.keyword.split('|').map((k: string) => ({ tag_title: k.trim() })).filter(Boolean) : [],
-                            participant_count: item.participant_count || 0,
-                            link: `https://dacon.io/competitions/official/${item.cpt_id}/overview/description`,
-                            type: 'hackathon',
-                        };
-                    }));
+                    allLearningContent = allLearningContent.concat(dsResult.hackathons.list.map((item: any): DaySchoolCourse => ({
+                        project_id: parseInt(item.cpt_id, 10),
+                        title: item.title, summary_img_object_key: '', difficulty: '중급',
+                        status: new Date() <= new Date(item.period_end) ? 'OPEN' : 'ENDED', stage_count: '1',
+                        updated_at: item.period_end, created_at: item.period_start, duration_in_minutes: '120',
+                        tags: (item.keyword || '').split('|').map((k: string) => ({ tag_title: k.trim() })).filter(Boolean),
+                        participant_count: item.participant_count || 0,
+                        link: `https://dacon.io/competitions/official/${item.cpt_id}/overview/description`, type: 'hackathon',
+                    })));
                 }
-
-                // 3. Process 'rankerVideos' (Lectures)
                 if (dsResult.rankerVideos && Array.isArray(dsResult.rankerVideos.list)) {
                     allLearningContent = allLearningContent.concat(dsResult.rankerVideos.list.map((item: any): DaySchoolCourse => ({
-                        project_id: parseInt(item.tb_id, 10),
-                        title: item.title,
-                        summary_img_object_key: item.thumbnail_url || '',
-                        difficulty: '고급', status: 'OPEN', stage_count: '1',
+                        project_id: parseInt(item.tb_id, 10), title: item.title,
+                        summary_img_object_key: item.thumbnail_url || '', difficulty: '고급', status: 'OPEN', stage_count: '1',
                         updated_at: item.created_at, created_at: item.created_at, duration_in_minutes: '60',
                         tags: [{ tag_title: '랭커특강' }], participant_count: 0,
-                        link: `https://dacon.io/forum/${item.tb_id}`,
-                        type: 'lecture',
+                        link: `https://dacon.io/forum/${item.tb_id}`, type: 'lecture',
                     })));
                 }
             }
 
-            if (!dsSuccess || allLearningContent.length === 0) {
-                 if (!dsSuccess) console.warn('DaySchool content API call failed, using fallback data.');
+            if (allLearningContent.length === 0) {
                  const fallbackData = [...daySchoolCourses, ...rankerLectures];
                  allLearningContent = fallbackData.map(course => {
-                    const hasTags = course.tags && course.tags.length > 0;
-                    if (hasTags) return course;
-
                     const titleLower = course.title.toLowerCase();
                     const keywordsInTitle = ['python', 'llm', 'langchain', 'rag', 'cnn', 'lstm', '파이썬', '딥러닝', '머신러닝'];
-                    const newTags = keywordsInTitle
-                        .filter(kw => titleLower.includes(kw))
-                        .map(kw => ({ tag_title: kw }));
-
+                    const newTags = keywordsInTitle.filter(kw => titleLower.includes(kw)).map(kw => ({ tag_title: kw }));
                     return { ...course, tags: newTags.length > 0 ? newTags : course.tags };
                 });
             }
             
-            // Calculate popular keywords right after fetching data
             const predefinedKeywords = ['파이썬', '딥러닝', '머신러닝', 'AI', '데이터', 'LangChain', 'RAG', 'LLM', 'CNN', 'LSTM', '회귀', '분류', '시각화', '챗봇', '프로젝트'];
             const dsKeywordCounts: { [key: string]: number } = {};
             allLearningContent.forEach(course => {
-                const contentText = (course.title + ' ' + course.tags.map(t => t.tag_title).join(' ')).toLowerCase();
-                predefinedKeywords.forEach(k => {
-                    if (contentText.includes(k.toLowerCase())) {
-                        dsKeywordCounts[k] = (dsKeywordCounts[k] || 0) + 1;
-                    }
-                });
+                const contentText = (course.title + ' ' + (course.tags || []).map(t => t.tag_title).join(' ')).toLowerCase();
+                predefinedKeywords.forEach(k => { if (contentText.includes(k.toLowerCase())) dsKeywordCounts[k] = (dsKeywordCounts[k] || 0) + 1; });
             });
-            const sortedDsKeywords = Object.entries(dsKeywordCounts)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 15)
-                .map(([k]) => k);
+            const sortedDsKeywords = Object.entries(dsKeywordCounts).sort(([, a], [, b]) => b - a).slice(0, 15).map(([k]) => k);
             
-            // Set both states together for a single render
             setAllDaySchoolContent(allLearningContent);
             setPopularDaySchoolKeywords(sortedDsKeywords);
-
         } catch (err: any) {
             console.error('Fetching data failed:', err);
             setAllCompetitions(staticCompetitions);
-            const fallbackData = [...daySchoolCourses, ...rankerLectures];
-            setAllDaySchoolContent(fallbackData);
+            setAllDaySchoolContent([...daySchoolCourses, ...rankerLectures]);
             setError(err.message + ' (API 호출에 실패하여 일부 데이터만 표시될 수 있습니다.)');
         } finally {
             setIsLoading(false);
@@ -617,9 +546,7 @@ const App: React.FC = () => {
 
     const fetchTickerStats = useCallback(async () => {
         try {
-            const response = await fetch('https://app.dacon.io/api/v1/main/cpt-stats');
-            if (!response.ok) throw new Error('Ticker API call failed');
-            const result = await response.json();
+            const result = await daconApi.getCompetitionStats();
             if (result && result.length > 0) {
                 const stats = result[0];
                 const formatPrize = (amountInManWon: number): string => {
@@ -628,38 +555,21 @@ const App: React.FC = () => {
                     return `${Math.round(amount / 10000).toLocaleString()}만원`;
                 };
                 setTickerStats({
-                    totalCount: stats.cnt_of_competition,
-                    ongoingCount: stats.on_going,
-                    totalPrize: formatPrize(stats.prize),
-                    totalParticipants: stats.participants.toLocaleString(),
+                    totalCount: stats.cnt_of_competition, ongoingCount: stats.on_going,
+                    totalPrize: formatPrize(stats.prize), totalParticipants: stats.participants.toLocaleString(),
                 });
             }
-        } catch (err) {
-            console.error('Fetching ticker stats failed:', err);
-            setTickerStats(null);
-        }
+        } catch (err) { console.error('Stats fetch failed:', err); setTickerStats(null); }
     }, []);
     
     const fetchDaySchoolTickerStats = useCallback(async () => {
-        try {
-            const response = await fetch('https://app.dacon.io/api/v2/edu/main');
-            if (!response.ok) throw new Error('DaySchool Ticker API call failed');
-            setDaySchoolTickerStats(await response.json());
-        } catch (err) {
-            console.error('Fetching DaySchool ticker stats failed:', err);
-            setDaySchoolTickerStats(null);
-        }
+        try { setDaySchoolTickerStats(await daconApi.getEducationStats()); } 
+        catch (err) { console.error('DS Stats fetch failed:', err); setDaySchoolTickerStats(null); }
     }, []);
 
     useEffect(() => {
-        fetchAllData();
-        fetchTickerStats();
-        fetchDaySchoolTickerStats();
-        const intervalId = setInterval(() => {
-            fetchAllData();
-            fetchTickerStats();
-            fetchDaySchoolTickerStats();
-        }, 3600000); // 1 hour
+        fetchAllData(); fetchTickerStats(); fetchDaySchoolTickerStats();
+        const intervalId = setInterval(() => { fetchAllData(); fetchTickerStats(); fetchDaySchoolTickerStats(); }, 3600000);
         return () => clearInterval(intervalId);
     }, [fetchAllData, fetchTickerStats, fetchDaySchoolTickerStats]);
 
@@ -668,10 +578,9 @@ const App: React.FC = () => {
             const storedSearches = localStorage.getItem('daconRecentSearches');
             if (storedSearches) {
                 const parsedData = JSON.parse(storedSearches);
-                // FIX: Explicitly cast parsedData to string[] to satisfy TypeScript compiler.
                 if (isStringArray(parsedData)) setRecentSearches(parsedData as string[]);
             }
-        } catch (error) { console.error("Failed to parse recent searches", error); }
+        } catch (error) { console.error("Recent search parse error", error); }
     }, []);
 
     useEffect(() => {
@@ -681,46 +590,47 @@ const App: React.FC = () => {
 
     useEffect(() => {
         const fetchSemanticKeywords = async () => {
-            if (!keywordFilter || keywordFilter.trim().length < 2) {
-                setSemanticKeywords([]);
-                return;
-            }
+            if (!keywordFilter || keywordFilter.trim().length < 2) { setSemanticKeywords([]); return; }
             setIsFetchingSemanticKeywords(true);
             try {
-                const prompt = `You are a search enhancement AI for 'Dacon', a Korean data science competition platform. A user is searching for '${keywordFilter}'. Provide a comma-separated list of 5-7 highly relevant Korean and English keywords, synonyms, and related technical terms to broaden the search. Focus on terms common in AI/data science. Output ONLY the comma-separated list. For example, for '의료', return 'medical, health, 헬스케어, 진단, 병원, medical imaging'.`;
-
-                const response = await ai.models.generateContent({
-                  model: 'gemini-2.5-flash',
-                  contents: prompt,
-                });
-
+                const prompt = `You are a search enhancement AI for 'Dacon', a Korean data science competition platform. A user is searching for '${keywordFilter}'. Provide a comma-separated list of 5-7 highly relevant Korean and English keywords, synonyms, and related technical terms to broaden the search. Focus on terms common in AI/data science. Output ONLY the comma-separated list.`;
+                const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
                 const keywordsText = response.text.trim();
                 if (keywordsText) {
                     const keywords = keywordsText.split(',').map(k => k.trim()).filter(Boolean);
                     setSemanticKeywords([...new Set(keywords)]);
-                } else {
-                    setSemanticKeywords([]);
-                }
+                } else { setSemanticKeywords([]); }
             } catch (error) {
-                console.error("Semantic keyword generation failed:", error);
-                setSemanticKeywords([]);
-                addToast('AI 확장 검색에 실패했습니다.');
-            } finally {
-                setIsFetchingSemanticKeywords(false);
-            }
+                console.error("Semantic search failed:", error); setSemanticKeywords([]); addToast('AI 확장 검색에 실패했습니다.');
+            } finally { setIsFetchingSemanticKeywords(false); }
         };
-
         fetchSemanticKeywords();
     }, [keywordFilter, addToast]);
 
+    // FIX: Define suggestions useMemo to fix "Cannot find name 'suggestions'"
+    const suggestions = useMemo(() => {
+        if (!inputValue) {
+            return {
+                recent: recentSearches,
+                popular: popularKeywords,
+            };
+        }
+        const combined = [...new Set([...recentSearches, ...popularKeywords])];
+        const filtered = combined.filter(
+            search =>
+                search.toLowerCase().includes(inputValue.toLowerCase()) &&
+                search.toLowerCase() !== inputValue.toLowerCase()
+        );
+        return { filtered };
+    }, [inputValue, recentSearches, popularKeywords]);
+
     useEffect(() => {
         if (isInitialMount.current || !keywordFilter.trim()) return;
-        const newSearches = [keywordFilter.trim(), ...recentSearches.filter(s => s.toLowerCase() !== keywordFilter.trim().toLowerCase())];
-        const limitedSearches = newSearches.slice(0, MAX_RECENT_SEARCHES);
-        setRecentSearches(limitedSearches);
-        localStorage.setItem('daconRecentSearches', JSON.stringify(limitedSearches));
+        const newSearches = [keywordFilter.trim(), ...recentSearches.filter(s => s.toLowerCase() !== keywordFilter.trim().toLowerCase())].slice(0, MAX_RECENT_SEARCHES);
+        setRecentSearches(newSearches);
+        localStorage.setItem('daconRecentSearches', JSON.stringify(newSearches));
         addToast(`'${keywordFilter.trim()}'(으)로 검색합니다.`);
-    }, [keywordFilter, addToast]); // remove recentSearches to avoid loop
+    }, [keywordFilter, addToast]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -731,6 +641,9 @@ const App: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
     
+    // FIX: Renamed handleSortChange to handleSortClick to fix "Cannot find name 'handleSortClick'"
+    const handleSortClick = useCallback((criteria: SortCriteria) => { setSortCriteria(criteria); addToast(`정렬 기준: ${{startDateDesc: '최신순', endDateAsc: '마감 임박순', participantsDesc: '참가자 많은 순', prizeDesc: '상금순'}[criteria]}`); }, [addToast]);
+
     const filteredCompetitions = useMemo(() => {
         const typeFilterKeywords: Record<Exclude<CompetitionTypeFilter, 'all'>, string[]> = {
             algorithm: ['알고리즘'], prompt: ['프롬프트'], service: ['서비스개발', '앱개발', '개발'], idea: ['아이디어']
@@ -746,124 +659,87 @@ const App: React.FC = () => {
                 return true;
             });
         }
-        
         if (typeFilter !== 'all') {
-            competitions = competitions.filter(comp => 
-                typeFilterKeywords[typeFilter].some(k => comp.name.toLowerCase().includes(k))
-            );
+            competitions = competitions.filter(comp => typeFilterKeywords[typeFilter].some(k => comp.name.toLowerCase().includes(k)));
         }
 
         const trimmedKeyword = keywordFilter.trim().toLowerCase();
         if (trimmedKeyword) {
             const allSearchTerms = [...new Set([trimmedKeyword, ...semanticKeywords.map(k => k.toLowerCase())])];
             competitions = competitions.filter(comp => {
-                const compKeyword = comp.keyword || '';
-                const compText = (comp.name + ' ' + compKeyword).toLowerCase();
+                const compText = (comp.name + ' ' + (comp.keyword || '')).toLowerCase();
                 return allSearchTerms.some(term => compText.includes(term));
             });
         }
 
         return [...competitions].sort((a, b) => {
-            // Primary sort: Ongoing competitions first
             const aIsOngoing = new Date() <= new Date(a.period_end);
             const bIsOngoing = new Date() <= new Date(b.period_end);
             if (aIsOngoing && !bIsOngoing) return -1;
             if (!aIsOngoing && bIsOngoing) return 1;
 
-            // Secondary sort: Relevance to keyword if searching
             if (trimmedKeyword) {
-                const aKeyword = a.keyword || '';
-                const bKeyword = b.keyword || '';
-                const aMatch = (a.name.toLowerCase() + aKeyword.toLowerCase()).includes(trimmedKeyword);
-                const bMatch = (b.name.toLowerCase() + bKeyword.toLowerCase()).includes(trimmedKeyword);
+                const aText = (a.name.toLowerCase() + (a.keyword || '').toLowerCase());
+                const bText = (b.name.toLowerCase() + (b.keyword || '').toLowerCase());
+                const aMatch = aText.includes(trimmedKeyword);
+                const bMatch = bText.includes(trimmedKeyword);
                 if (aMatch && !bMatch) return -1;
                 if (!aMatch && bMatch) return 1;
             }
             
-            // Tertiary sort: User-selected criteria
             switch (sortCriteria) {
-                case 'endDateAsc':
-                    return new Date(a.period_end).getTime() - new Date(b.period_end).getTime();
+                case 'endDateAsc': return new Date(a.period_end).getTime() - new Date(b.period_end).getTime();
                 case 'participantsDesc': return b.user_count - a.user_count;
                 case 'prizeDesc': return parsePrizeMoney(b.prize_info) - parsePrizeMoney(a.prize_info);
-                case 'startDateDesc': default: return new Date(b.period_start).getTime() - new Date(b.period_start).getTime();
+                case 'startDateDesc': default: return new Date(b.period_start).getTime() - new Date(a.period_start).getTime();
             }
         });
     }, [allCompetitions, showDataLinksOnly, statusFilter, typeFilter, keywordFilter, semanticKeywords, sortCriteria]);
 
     const filteredDaySchoolCourses = useMemo(() => {
         let filtered = allDaySchoolContent;
-
-        if (daySchoolTypeFilter !== 'all') {
-            filtered = filtered.filter(c => c.type === daySchoolTypeFilter);
-        }
+        if (daySchoolTypeFilter !== 'all') filtered = filtered.filter(c => c.type === daySchoolTypeFilter);
 
         const mainKeyword = keywordFilter.trim().toLowerCase();
         const categoryKeyword = daySchoolKeywordFilter?.toLowerCase();
-
         if (mainKeyword || categoryKeyword) {
             const allSearchTerms = new Set<string>();
-            if (mainKeyword) {
-                allSearchTerms.add(mainKeyword);
-                semanticKeywords.forEach(k => allSearchTerms.add(k.toLowerCase()));
-            }
-            if (categoryKeyword) {
-                allSearchTerms.add(categoryKeyword);
-            }
-
+            if (mainKeyword) { allSearchTerms.add(mainKeyword); semanticKeywords.forEach(k => allSearchTerms.add(k.toLowerCase())); }
+            if (categoryKeyword) allSearchTerms.add(categoryKeyword);
             filtered = filtered.filter(c => {
-                const contentText = (c.title + ' ' + c.tags.map(t => t.tag_title).join(' ')).toLowerCase();
+                const contentText = (c.title + ' ' + (c.tags || []).map(t => t.tag_title).join(' ')).toLowerCase();
                 return Array.from(allSearchTerms).some(term => contentText.includes(term));
             });
         }
-        
-        if (daySchoolDifficultyFilter) {
-            filtered = filtered.filter(c => c.difficulty === daySchoolDifficultyFilter);
-        }
+        if (daySchoolDifficultyFilter) filtered = filtered.filter(c => c.difficulty === daySchoolDifficultyFilter);
         
         return [...filtered].sort((a, b) => {
+            const multiplier = (daySchoolSortCriteria === 'titleAsc' || daySchoolSortCriteria === 'difficulty') ? (daySchoolSortDirection === 'asc' ? 1 : -1) : (daySchoolSortDirection === 'desc' ? -1 : 1);
             let comparison = 0;
-            const direction = (daySchoolSortCriteria === 'titleAsc' || daySchoolSortCriteria === 'difficulty') ? 'asc' : daySchoolSortDirection;
-            const multiplier = direction === 'asc' ? 1 : -1;
-
             switch (daySchoolSortCriteria) {
                  case 'difficulty': {
                     const difficultyOrder: { [key: string]: number } = { '초급': 1, '중급': 2, '고급': 3 };
                     comparison = (difficultyOrder[a.difficulty] || 99) - (difficultyOrder[b.difficulty] || 99);
                     break;
                 }
-                case 'duration_in_minutes':
-                    comparison = Number(a.duration_in_minutes) - Number(b.duration_in_minutes);
-                    break;
-                case 'participant_count':
-                    comparison = a.participant_count - b.participant_count;
-                    break;
-                case 'status':
-                    if (a.status === 'NEW' && b.status !== 'NEW') return -1;
-                    if (a.status !== 'NEW' && b.status === 'NEW') return 1;
-                    return b.project_id - a.project_id;
-                case 'titleAsc':
-                    comparison = a.title.localeCompare(b.title);
-                    break;
-                case 'idDesc': default:
-                    comparison = b.project_id - a.project_id;
-                    break;
+                case 'duration_in_minutes': comparison = Number(a.duration_in_minutes) - Number(b.duration_in_minutes); break;
+                case 'participant_count': comparison = a.participant_count - b.participant_count; break;
+                case 'status': if (a.status === 'NEW' && b.status !== 'NEW') return -1; if (a.status !== 'NEW' && b.status === 'NEW') return 1; return b.project_id - a.project_id;
+                case 'titleAsc': comparison = a.title.localeCompare(b.title); break;
+                case 'idDesc': default: comparison = b.project_id - a.project_id; break;
             }
-            return comparison * multiplier;
+            return comparison * (daySchoolSortDirection === 'asc' ? 1 : -1);
         });
     }, [allDaySchoolContent, keywordFilter, semanticKeywords, daySchoolKeywordFilter, daySchoolSortCriteria, daySchoolSortDirection, daySchoolDifficultyFilter, daySchoolTypeFilter]);
     
     const filteredBaseCode = useMemo(() => {
         let filtered = baseCodeData;
-        if (baseCodeCategoryFilter !== 'all') {
-            filtered = filtered.filter(item => item.category === baseCodeCategoryFilter);
-        }
-
+        if (baseCodeCategoryFilter !== 'all') filtered = filtered.filter(item => item.category === baseCodeCategoryFilter);
         const trimmedKeyword = keywordFilter.trim().toLowerCase();
         if (trimmedKeyword) {
             const allSearchTerms = [...new Set([trimmedKeyword, ...semanticKeywords.map(k => k.toLowerCase())])];
             filtered = filtered.filter(item => {
-                const itemText = (item.title + ' ' + item.keywords.join(' ')).toLowerCase();
+                const itemText = (item.title + ' ' + (item.keywords || []).join(' ')).toLowerCase();
                 return allSearchTerms.some(term => itemText.includes(term));
             });
         }
@@ -872,16 +748,10 @@ const App: React.FC = () => {
     
     const fetchAiTip = useCallback(() => {
         setIsFetchingAiTip(true); setAiTipError(null); setAiTip(null);
-        setTimeout(() => {
-            setAiTip(staticAiTips[Math.floor(Math.random() * staticAiTips.length)]);
-            setIsFetchingAiTip(false);
-        }, 300);
+        setTimeout(() => { setAiTip(staticAiTips[Math.floor(Math.random() * staticAiTips.length)]); setIsFetchingAiTip(false); }, 300);
     }, []);
 
-    useEffect(() => {
-        if (!isInitialMount.current) setCurrentPage(1);
-    }, [keywordFilter, statusFilter, sortCriteria, viewMode, showDataLinksOnly, typeFilter, daySchoolSortCriteria, daySchoolKeywordFilter, daySchoolDifficultyFilter, daySchoolTypeFilter, baseCodeCategoryFilter, daySchoolSortDirection]);
-
+    useEffect(() => { if (!isInitialMount.current) setCurrentPage(1); }, [keywordFilter, statusFilter, sortCriteria, viewMode, showDataLinksOnly, typeFilter, daySchoolSortCriteria, daySchoolKeywordFilter, daySchoolDifficultyFilter, daySchoolTypeFilter, baseCodeCategoryFilter, daySchoolSortDirection]);
     useEffect(() => {
         let title = '데이콘 AI 경진대회 대시보드';
         if (viewMode === 'dayschool') title = '학습 강좌 목록 | 데이콘';
@@ -890,13 +760,10 @@ const App: React.FC = () => {
         else if (viewMode === 'competition_roadmap') title = '대회 참가 방법 | 데이콘';
         else if (keywordFilter) title = `'${keywordFilter}' 검색 결과 | 데이콘`;
         document.title = title;
-    }, [keywordFilter, statusFilter, viewMode]);
-    
+    }, [keywordFilter, viewMode]);
     useEffect(() => { isInitialMount.current = false; }, []);
-
     useEffect(() => {
         const noResults = (viewMode === 'list' && filteredCompetitions.length === 0) || (viewMode === 'dayschool' && filteredDaySchoolCourses.length === 0) || (viewMode === 'basecode' && filteredBaseCode.length === 0);
-        // FIX: The `viewMode !== 'roadmap'` check was redundant because `noResults` is only true for 'list', 'dayschool', or 'basecode' views, which are never 'roadmap'. The compiler correctly identified this as an unintentional comparison.
         if (!isLoading && noResults) fetchAiTip();
     }, [isLoading, filteredCompetitions.length, filteredDaySchoolCourses.length, filteredBaseCode.length, viewMode, fetchAiTip]);
 
@@ -905,7 +772,7 @@ const App: React.FC = () => {
             setViewMode(view); setCurrentPage(1);
             if (view !== 'list') { setStatusFilter('all'); setTypeFilter('all'); setSortCriteria('startDateDesc'); }
             if (view !== 'dayschool') { setDaySchoolKeywordFilter(null); setDaySchoolDifficultyFilter(null); }
-            if (view !== 'basecode') { setBaseCodeCategoryFilter('all'); }
+            if (view !== 'basecode') setBaseCodeCategoryFilter('all');
             setDaySchoolTypeFilter(type);
             addToast(`${{list: '대회 목록', basecode: '기초 코드', dayschool: '학습 강좌', roadmap: '로드맵', competition_roadmap: '대회 참가 방법'}[view]} 보기로 전환합니다.`);
         }
@@ -913,152 +780,63 @@ const App: React.FC = () => {
 
     const handleCompetitionNavClick = useCallback(() => {
         const wasChanged = viewMode !== 'list' || showDataLinksOnly;
-        setViewMode('list');
-        setShowDataLinksOnly(false);
-        if (wasChanged) {
-             addToast('전체 대회 목록 보기로 전환합니다.');
-        }
+        setViewMode('list'); setShowDataLinksOnly(false);
+        if (wasChanged) addToast('전체 대회 목록 보기로 전환합니다.');
         setCurrentPage(1);
     }, [viewMode, showDataLinksOnly, addToast]);
 
     const handleDataLinksToggle = useCallback(() => {
-        if (viewMode !== 'list') {
-            setViewMode('list');
-            setShowDataLinksOnly(true);
-            addToast('데이터 다운로드 가능 대회만 표시합니다.');
-        } else {
-            setShowDataLinksOnly(prev => {
-                const newValue = !prev;
-                addToast(newValue ? '데이터 다운로드 가능 대회만 표시합니다.' : '전체 대회 목록을 표시합니다.');
-                return newValue;
-            });
-        }
+        if (viewMode !== 'list') { setViewMode('list'); setShowDataLinksOnly(true); addToast('데이터 다운로드 가능 대회만 표시합니다.'); } 
+        else { setShowDataLinksOnly(prev => { const newValue = !prev; addToast(newValue ? '데이터 다운로드 가능 대회만 표시합니다.' : '전체 대회 목록을 표시합니다.'); return newValue; }); }
         setCurrentPage(1);
     }, [viewMode, addToast]);
 
-    const handleStatusClick = useCallback((status: StatusFilter) => {
-        setStatusFilter(status); window.scrollTo({ top: 0, behavior: 'smooth' });
-        addToast(`상태 필터: ${{all: '전체', ongoing: '진행중', ended: '종료', practice: '연습'}[status]}`);
-    }, [addToast]);
-    
-    const handleTypeClick = useCallback((type: CompetitionTypeFilter) => {
-        setTypeFilter(type); window.scrollTo({ top: 0, behavior: 'smooth' });
-        addToast(`유형 필터: ${{all: '전체', algorithm: '알고리즘', prompt: '프롬프트', service: '개발', idea: '아이디어'}[type]}`);
-    }, [addToast]);
-
-    const handleSortChange = useCallback((criteria: SortCriteria) => {
-        setSortCriteria(criteria);
-        addToast(`정렬 기준: ${{startDateDesc: '최신순', endDateAsc: '마감 임박순', participantsDesc: '참가자 많은 순', prizeDesc: '상금순'}[criteria]}`);
-    }, [addToast]);
-
+    const handleStatusClick = useCallback((status: StatusFilter) => { setStatusFilter(status); window.scrollTo({ top: 0, behavior: 'smooth' }); addToast(`상태 필터: ${{all: '전체', ongoing: '진행중', ended: '종료', practice: '연습'}[status]}`); }, [addToast]);
+    const handleTypeClick = useCallback((type: CompetitionTypeFilter) => { setTypeFilter(type); window.scrollTo({ top: 0, behavior: 'smooth' }); addToast(`유형 필터: ${{all: '전체', algorithm: '알고리즘', prompt: '프롬프트', service: '개발', idea: '아이디어'}[type]}`); }, [addToast]);
     const handleDaySchoolSortChange = useCallback((criteria: DaySchoolSortCriteria) => {
         setDaySchoolSortCriteria(currentCrit => {
-            if (currentCrit === criteria) {
-                setDaySchoolSortDirection(currentDir => currentDir === 'desc' ? 'asc' : 'desc');
-            } else {
-                setDaySchoolSortDirection(criteria === 'titleAsc' || criteria === 'difficulty' ? 'asc' : 'desc');
-            }
+            if (currentCrit === criteria) { setDaySchoolSortDirection(currentDir => currentDir === 'desc' ? 'asc' : 'desc'); } 
+            else { setDaySchoolSortDirection(criteria === 'titleAsc' || criteria === 'difficulty' ? 'asc' : 'desc'); }
             return criteria;
         });
-        const criteriaMap: Record<DaySchoolSortCriteria, string> = {
-            status: '신규순', idDesc: '최신순', titleAsc: '제목순',
-            difficulty: '난이도순', duration_in_minutes: '학습 시간순', participant_count: '참여 인원순'
-        };
+        const criteriaMap: Record<DaySchoolSortCriteria, string> = { status: '신규순', idDesc: '최신순', titleAsc: '제목순', difficulty: '난이도순', duration_in_minutes: '학습 시간순', participant_count: '참여 인원순' };
         addToast(`정렬 기준: ${criteriaMap[criteria]}`);
     }, [addToast]);
-
-    const handleDaySchoolKeywordClick = useCallback((keyword: string | null) => {
-        setDaySchoolKeywordFilter(keyword); window.scrollTo({ top: 0, behavior: 'smooth' });
-        addToast(keyword ? `키워드 필터: #${keyword}` : '키워드 필터를 초기화했습니다.');
-    }, [addToast]);
-    
-    const handleDaySchoolDifficultyClick = useCallback((difficulty: string) => {
-        const newDifficulty = daySchoolDifficultyFilter === difficulty ? null : difficulty;
-        setDaySchoolDifficultyFilter(newDifficulty); window.scrollTo({ top: 0, behavior: 'smooth' });
-        addToast(newDifficulty ? `난이도 필터: ${newDifficulty}` : '난이도 필터를 초기화했습니다.');
-    }, [addToast, daySchoolDifficultyFilter]);
-
-     const handleDaySchoolTypeChange = useCallback((type: DaySchoolTypeFilter) => {
-        setDaySchoolTypeFilter(type); window.scrollTo({ top: 0, behavior: 'smooth' });
-        addToast(`종류 필터: ${{all: '전체', course: '강좌', hackathon: '해커톤', lecture: '랭커특강'}[type]}`);
-    }, [addToast]);
-
-    const handleBaseCodeCategoryChange = useCallback((category: BaseCodeCategory | 'all') => {
-        setBaseCodeCategoryFilter(category); window.scrollTo({ top: 0, behavior: 'smooth' });
-        addToast(category === 'all' ? '모든 코드 카테고리 표시' : `${category} 카테고리 필터 적용`);
-    }, [addToast]);
-
+    const handleDaySchoolKeywordClick = useCallback((keyword: string | null) => { setDaySchoolKeywordFilter(keyword); window.scrollTo({ top: 0, behavior: 'smooth' }); addToast(keyword ? `키워드 필터: #${keyword}` : '키워드 필터를 초기화했습니다.'); }, [addToast]);
+    const handleDaySchoolDifficultyClick = useCallback((difficulty: string) => { const newDifficulty = daySchoolDifficultyFilter === difficulty ? null : difficulty; setDaySchoolDifficultyFilter(newDifficulty); window.scrollTo({ top: 0, behavior: 'smooth' }); addToast(newDifficulty ? `난이도 필터: ${newDifficulty}` : '난이도 필터를 초기화했습니다.'); }, [addToast, daySchoolDifficultyFilter]);
+    const handleDaySchoolTypeChange = useCallback((type: DaySchoolTypeFilter) => { setDaySchoolTypeFilter(type); window.scrollTo({ top: 0, behavior: 'smooth' }); addToast(`종류 필터: ${{all: '전체', course: '강좌', hackathon: '해커톤', lecture: '랭커특강'}[type]}`); }, [addToast]);
+    const handleBaseCodeCategoryChange = useCallback((category: BaseCodeCategory | 'all') => { setBaseCodeCategoryFilter(category); window.scrollTo({ top: 0, behavior: 'smooth' }); addToast(category === 'all' ? '모든 코드 카테고리 표시' : `${category} 카테고리 필터 적용`); }, [addToast]);
     const handleKeywordClick = useCallback((keyword: string) => { setInputValue(keyword); window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
-    const handleSortClick = useCallback((criteria: SortCriteria) => { setSortCriteria(criteria); window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
-
     const handleReset = useCallback(() => {
-        setInputValue(''); setKeywordFilter(''); setStatusFilter('all'); setTypeFilter('all'); setSortCriteria('startDateDesc');
-        setShowDataLinksOnly(false); setCurrentPage(1); setDaySchoolSortCriteria('status'); setDaySchoolKeywordFilter(null); setDaySchoolDifficultyFilter(null);
-        setDaySchoolTypeFilter('all'); setBaseCodeCategoryFilter('all'); setDaySchoolSortDirection('desc');
-        if (viewMode !== 'list') setViewMode('list');
-        addToast('모든 필터를 초기화했습니다.');
+        setInputValue(''); setKeywordFilter(''); setStatusFilter('all'); setTypeFilter('all'); setSortCriteria('startDateDesc'); setShowDataLinksOnly(false); setCurrentPage(1); setDaySchoolSortCriteria('status'); setDaySchoolKeywordFilter(null); setDaySchoolDifficultyFilter(null); setDaySchoolTypeFilter('all'); setBaseCodeCategoryFilter('all'); setDaySchoolSortDirection('desc'); if (viewMode !== 'list') setViewMode('list'); addToast('모든 필터를 초기화했습니다.');
     }, [viewMode, addToast]);
     
-    const hasActiveFilters = useMemo(() => {
-        return !!keywordFilter.trim() || statusFilter !== 'all' || typeFilter !== 'all' || showDataLinksOnly;
-    }, [keywordFilter, statusFilter, typeFilter, showDataLinksOnly]);
-
     const paginatedCompetitions = useMemo(() => {
-        if (hasActiveFilters) {
-            // Standard pagination when any filter is active
-            const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-            return filteredCompetitions.slice(offset, offset + ITEMS_PER_PAGE);
-        }
-        
-        // Special pagination for default view with special cards
-        const itemsOnFirstPage = ITEMS_PER_PAGE - 2; // Two special cards
-        if (currentPage === 1) {
-            return filteredCompetitions.slice(0, itemsOnFirstPage);
-        }
+        const hasFilters = !!keywordFilter.trim() || statusFilter !== 'all' || typeFilter !== 'all' || showDataLinksOnly;
+        if (hasFilters) { const offset = (currentPage - 1) * ITEMS_PER_PAGE; return filteredCompetitions.slice(offset, offset + ITEMS_PER_PAGE); }
+        const itemsOnFirstPage = ITEMS_PER_PAGE - 2;
+        if (currentPage === 1) return filteredCompetitions.slice(0, itemsOnFirstPage);
         const offset = itemsOnFirstPage + (currentPage - 2) * ITEMS_PER_PAGE;
         return filteredCompetitions.slice(offset, offset + ITEMS_PER_PAGE);
-    }, [filteredCompetitions, currentPage, hasActiveFilters]);
+    }, [filteredCompetitions, currentPage, keywordFilter, statusFilter, typeFilter, showDataLinksOnly]);
 
-     const paginatedDaySchoolCourses = useMemo(() => {
+    const paginatedDaySchoolCourses = useMemo(() => {
         const itemsOnFirstPage = ITEMS_PER_PAGE_DAYSCHOOL - 2;
         if (currentPage === 1) return filteredDaySchoolCourses.slice(0, itemsOnFirstPage);
         const offset = itemsOnFirstPage + (currentPage - 2) * ITEMS_PER_PAGE_DAYSCHOOL;
         return filteredDaySchoolCourses.slice(offset, offset + ITEMS_PER_PAGE_DAYSCHOOL);
     }, [filteredDaySchoolCourses, currentPage]);
 
-    const paginatedBaseCode = useMemo(() => {
-        const offset = (currentPage - 1) * ITEMS_PER_PAGE_BASECODE;
-        return filteredBaseCode.slice(offset, offset + ITEMS_PER_PAGE_BASECODE);
-    }, [filteredBaseCode, currentPage]);
-
+    const paginatedBaseCode = useMemo(() => filteredBaseCode.slice((currentPage - 1) * ITEMS_PER_PAGE_BASECODE, currentPage * ITEMS_PER_PAGE_BASECODE), [filteredBaseCode, currentPage]);
     const paginationTotalItems = useMemo(() => {
-        if (viewMode === 'dayschool') {
-            return filteredDaySchoolCourses.length > 0 ? filteredDaySchoolCourses.length + 2 : 0;
-        }
-        if (viewMode === 'basecode') {
-            return filteredBaseCode.length;
-        }
-        // This is for viewMode === 'list'
-        if (hasActiveFilters) {
-            return filteredCompetitions.length;
-        }
-        // Two special cards on the first page
-        return filteredCompetitions.length > 0 ? filteredCompetitions.length + 2 : 0;
-    }, [filteredCompetitions.length, filteredDaySchoolCourses.length, filteredBaseCode.length, viewMode, hasActiveFilters]);
+        if (viewMode === 'dayschool') return filteredDaySchoolCourses.length > 0 ? filteredDaySchoolCourses.length + 2 : 0;
+        if (viewMode === 'basecode') return filteredBaseCode.length;
+        const hasFilters = !!keywordFilter.trim() || statusFilter !== 'all' || typeFilter !== 'all' || showDataLinksOnly;
+        return filteredCompetitions.length > 0 ? (hasFilters ? filteredCompetitions.length : filteredCompetitions.length + 2) : 0;
+    }, [filteredCompetitions.length, filteredDaySchoolCourses.length, filteredBaseCode.length, viewMode, keywordFilter, statusFilter, typeFilter, showDataLinksOnly]);
     
-    const handleToggleManual = useCallback(() => setIsManualVisible(p => !p), []);
-
-    const suggestions = useMemo(() => {
-        if (!inputValue) {
-            const popularToShow = popularKeywords.filter(pk => !recentSearches.some(rs => rs.toLowerCase() === pk.toLowerCase()));
-            return { recent: recentSearches, popular: popularToShow };
-        }
-        const combined = [...new Set([...recentSearches, ...popularKeywords])];
-        return { filtered: combined.filter(s => s.toLowerCase().includes(inputValue.toLowerCase()) && s.toLowerCase() !== inputValue.toLowerCase()) };
-    }, [inputValue, recentSearches, popularKeywords]);
-
     const tickerItems = useMemo(() => {
-        if (viewMode === 'dayschool' || viewMode === 'roadmap' || viewMode === 'basecode' || viewMode === 'competition_roadmap') {
+        if (['dayschool', 'roadmap', 'basecode', 'competition_roadmap'].includes(viewMode)) {
             if (!daySchoolTickerStats) return null;
             return [`총 ${daySchoolTickerStats.participants.toLocaleString()}명 참여`, `${daySchoolTickerStats.lesson_count}개 레슨`, `${daySchoolTickerStats.contents_count}개 콘텐츠`, '데이터로 꿈을 현실로!'];
         }
@@ -1068,374 +846,101 @@ const App: React.FC = () => {
 
     const isGlass = theme === 'glass';
     const isNeumorphic = theme === 'neumorphic';
-
-    const getNavButtonClasses = (buttonView: '대회' | '데이터' | '코드' | '학습' | '강좌' | '해커톤' | '랭커특강' | '로드맵' | '참가 방법') => {
-        let isSpecificallyActive = false;
-        
+    const getNavButtonClasses = (buttonView: string) => {
+        let active = false;
         switch (buttonView) {
-            case '대회':
-                isSpecificallyActive = (viewMode === 'list' && !showDataLinksOnly) || viewMode === 'competition_roadmap' || viewMode === 'basecode';
-                break;
-            case '데이터':
-                isSpecificallyActive = viewMode === 'list' && showDataLinksOnly;
-                break;
-            case '코드':
-                isSpecificallyActive = viewMode === 'basecode';
-                break;
-            case '참가 방법':
-                isSpecificallyActive = viewMode === 'competition_roadmap';
-                break;
-            case '학습':
-                isSpecificallyActive = viewMode === 'dayschool' || viewMode === 'roadmap';
-                break;
-            case '강좌':
-                isSpecificallyActive = viewMode === 'dayschool' && daySchoolTypeFilter === 'course';
-                break;
-            case '해커톤':
-                isSpecificallyActive = viewMode === 'dayschool' && daySchoolTypeFilter === 'hackathon';
-                break;
-            case '랭커특강':
-                 isSpecificallyActive = viewMode === 'dayschool' && daySchoolTypeFilter === 'lecture';
-                break;
-            case '로드맵':
-                isSpecificallyActive = viewMode === 'roadmap';
-                break;
+            case '대회': active = (viewMode === 'list' && !showDataLinksOnly) || viewMode === 'competition_roadmap' || viewMode === 'basecode'; break;
+            case '데이터': active = viewMode === 'list' && showDataLinksOnly; break;
+            case '코드': active = viewMode === 'basecode'; break;
+            case '참가 방법': active = viewMode === 'competition_roadmap'; break;
+            case '학습': active = viewMode === 'dayschool' || viewMode === 'roadmap'; break;
+            case '강좌': active = viewMode === 'dayschool' && daySchoolTypeFilter === 'course'; break;
+            case '해커톤': active = viewMode === 'dayschool' && daySchoolTypeFilter === 'hackathon'; break;
+            case '랭커특강': active = viewMode === 'dayschool' && daySchoolTypeFilter === 'lecture'; break;
+            case '로드맵': active = viewMode === 'roadmap'; break;
         }
-
         const base = `px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-semibold rounded-lg transition-all duration-300 transform flex items-center gap-2`;
         const webtoonBase = `px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-bold rounded-md transition-all duration-200 border-2 border-black`;
-
-        const isLearningButton = ['학습', '강좌', '해커톤', '랭커특강', '로드맵'].includes(buttonView);
+        const learning = ['학습', '강좌', '해커톤', '랭커특강', '로드맵'].includes(buttonView);
         const activeLearningColor = 'bg-[rgb(253,224,72,0.73)]';
-
-        if (isLearningButton) {
-            if (isGlass) {
-                return `${base} border ${isSpecificallyActive ? `${activeLearningColor} text-black font-bold border-yellow-400 shadow-[0_0_8px_rgba(253,224,72,0.6)]` : 'bg-slate-800/40 text-slate-200 border-slate-700 hover:bg-slate-700/50 hover:border-yellow-500/50'}`;
-            }
-            if (isNeumorphic) {
-                return `${base} ${isSpecificallyActive ? `shadow-[inset_5px_5px_10px_#a3b1c6,inset_-5px_-5px_10px_#ffffff] text-black ${activeLearningColor}` : 'shadow-[5px_5px_10px_#a3b1c6,-5px_-5px_10px_#ffffff] text-gray-700 hover:shadow-[8px_8px_16px_#a3b1c6,-8px_-8px_16px_#ffffff] hover:-translate-y-1'}`;
-            }
-            return `${webtoonBase} ${isSpecificallyActive ? `${activeLearningColor} text-black shadow-[3px_3px_0_#000]` : 'bg-white text-black hover:bg-gray-100'}`;
+        if (learning) {
+            if (isGlass) return `${base} border ${active ? `${activeLearningColor} text-black font-bold border-yellow-400` : 'bg-slate-800/40 text-slate-200 border-slate-700'}`;
+            if (isNeumorphic) return `${base} ${active ? `shadow-[inset_5px_5px_10px_#a3b1c6] text-black ${activeLearningColor}` : 'shadow-[5px_5px_10px_#a3b1c6] text-gray-700'}`;
+            return `${webtoonBase} ${active ? `${activeLearningColor} text-black shadow-[3px_3px_0_#000]` : 'bg-white'}`;
         }
-        
-        if (isGlass) {
-            return `${base} border ${isSpecificallyActive ? 'bg-sky-500/60 text-white border-sky-400' : 'bg-slate-800/40 text-slate-200 border-slate-700 hover:bg-slate-700/50 hover:border-sky-500/50'}`;
-        }
-        if (isNeumorphic) {
-            return `${base} ${isSpecificallyActive ? 'shadow-[inset_5px_5px_10px_#a3b1c6,inset_-5px_-5px_10px_#ffffff] text-blue-600' : 'shadow-[5px_5px_10px_#a3b1c6,-5px_-5px_10px_#ffffff] text-gray-700 hover:shadow-[8px_8px_16px_#a3b1c6,-8px_-8px_16px_#ffffff] hover:-translate-y-1'}`;
-        }
-        return `${webtoonBase} ${isSpecificallyActive ? 'bg-blue-500 text-white shadow-[3px_3px_0_#000]' : 'bg-white text-black hover:bg-gray-100'}`;
+        if (isGlass) return `${base} border ${active ? 'bg-sky-500/60 text-white border-sky-400' : 'bg-slate-800/40 text-slate-200 border-slate-700'}`;
+        if (isNeumorphic) return `${base} ${active ? `shadow-[inset_5px_5px_10px_#a3b1c6] text-blue-600` : 'shadow-[5px_5px_10px_#a3b1c6] text-gray-700'}`;
+        return `${webtoonBase} ${active ? 'bg-blue-500 text-white shadow-[3px_3px_0_#000]' : 'bg-white'}`;
     };
-
-    const getFilterButtonClasses = (isActive: boolean, disabled = false) => {
-        const base = `px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-semibold rounded-lg transition-all duration-300 transform flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`;
-
-        if (isGlass) {
-            return `${base} border ${isActive ? 'bg-sky-500/60 text-white border-sky-400/80 shadow-[0_0_8px_rgba(14,165,233,0.6)]' : 'bg-slate-800/50 text-slate-200 border-slate-700 hover:bg-slate-700/60 hover:border-sky-500/50'} disabled:bg-slate-800/20 disabled:border-slate-700/30 disabled:hover:bg-slate-800/20`;
-        }
-        if (isNeumorphic) {
-            return `${base} ${isActive ? 'shadow-[inset_5px_5px_10px_#a3b1c6,inset_-5px_-5px_10px_#ffffff] text-blue-600' : 'shadow-[5px_5px_10px_#a3b1c6,-5px_-5px_10px_#ffffff] text-gray-700 hover:shadow-[8px_8px_16px_#a3b1c6,-8px_-8px_16px_#ffffff] hover:-translate-y-1'} disabled:shadow-none disabled:hover:shadow-none disabled:hover:-translate-y-0 disabled:text-gray-400`;
-        }
-        return `px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-bold rounded-md transition-all duration-200 border-2 border-black flex items-center gap-2 ${isActive ? 'bg-blue-500 text-white shadow-[3px_3px_0_#000]' : 'bg-white text-black hover:bg-gray-100'} disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none disabled:hover:bg-gray-200`;
+    const getFilterButtonClasses = (isActive: boolean) => {
+        const base = `px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-semibold rounded-lg transition-all duration-300 transform flex items-center gap-2`;
+        if (isGlass) return `${base} border ${isActive ? 'bg-sky-500/60 text-white border-sky-400' : 'bg-slate-800/50 text-slate-200 border-slate-700'}`;
+        if (isNeumorphic) return `${base} ${isActive ? 'shadow-[inset_5px_5px_10px_#a3b1c6] text-blue-600' : 'shadow-[5px_5px_10px_#a3b1c6] text-gray-700'}`;
+        return `${base} border-2 border-black font-bold rounded-md ${isActive ? 'bg-blue-500 text-white shadow-[3px_3px_0_#000]' : 'bg-white'}`;
     };
-    
-    const isSearchInputVisible = true;
-    const isCompetitionSortVisible = viewMode === 'list';
-
-    const mainPaddingClass = useMemo(() => {
-        if (isBannerVisible) return 'pt-[218px]'; // Banner + Nav + Ticker
-        if (isHeaderAndFilterVisible) return 'pt-[144px]'; // Nav + Ticker
-        return 'pt-[64px]'; // Nav only
-    }, [isBannerVisible, isHeaderAndFilterVisible]);
-
-    const filterSectionTopClass = useMemo(() => {
-        if (isBannerVisible) return 'top-[218px]'; // Match full header height at top
-        if (isHeaderAndFilterVisible) return 'top-[144px]'; // Stick below Nav + Ticker
-        return 'top-[64px]'; // Stick below Nav only
-    }, [isBannerVisible, isHeaderAndFilterVisible]);
 
     return (
         <>
-            <div aria-live="polite" aria-atomic="true" className="fixed top-20 right-4 z-[100] space-y-2">
+            <div aria-live="polite" className="fixed top-20 right-4 z-[100] space-y-2">
                 {toasts.map(t => <Toast key={t.id} {...t} onClose={removeToast} theme={theme} />)}
             </div>
-            <Header 
-                bannerText={bannerText}
-                tickerItems={tickerItems} 
-                theme={theme} 
-                setTheme={setTheme} 
-                onCompetitionClick={handleCompetitionNavClick}
-                onLearningClick={() => handleViewChange('dayschool')}
-                isBannerVisible={isBannerVisible}
-                isHeaderContentVisible={isHeaderAndFilterVisible}
-            />
-            <main className={`transition-all duration-300 ${mainPaddingClass}`}>
+            <Header bannerText={bannerText} tickerItems={tickerItems} theme={theme} setTheme={setTheme} onCompetitionClick={handleCompetitionNavClick} onLearningClick={() => handleViewChange('dayschool')} isBannerVisible={isBannerVisible} isHeaderContentVisible={isHeaderAndFilterVisible} />
+            <main className={`transition-all duration-300 ${isBannerVisible ? 'pt-[218px]' : isHeaderAndFilterVisible ? 'pt-[144px]' : 'pt-[64px]'}`}>
                 <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 lg:p-12">
-                     <section aria-labelledby="filter-heading" className={`sticky ${filterSectionTopClass} z-30 mb-8 p-4 rounded-2xl flex flex-col gap-4 transition-transform duration-300 ${isHeaderAndFilterVisible ? 'translate-y-0' : '-translate-y-full'} ${
-                        isGlass ? 'bg-slate-900/75 backdrop-blur-md border border-slate-700' :
-                        isNeumorphic ? 'bg-[#e0e5ec] shadow-[8px_8px_16px_#a3b1c6,-8px_-8px_16px_#ffffff]' :
-                        'bg-white border-2 border-black'
-                    }`}>
-                        <h1 id="filter-heading" className="sr-only">데이콘 콘텐츠 검색 및 필터</h1>
-                        
-                        {isSearchInputVisible && (
-                            <div className="flex flex-col md:flex-row items-center gap-4">
-                                <div ref={searchContainerRef} className="relative w-full md:flex-1">
-                                    <input
-                                        type="text"
-                                        placeholder="키워드로 전체 콘텐츠 검색 (대회, 강좌, 코드)"
-                                        value={inputValue}
-                                        onChange={(e) => setInputValue(e.target.value)}
-                                        onFocus={() => setShowSuggestions(true)}
-                                        className={`w-full pl-4 pr-24 py-3 rounded-lg focus:outline-none text-sm sm:text-base ${
-                                            isGlass ? 'bg-slate-900/70 border border-slate-600/50 focus:ring-2 focus:ring-sky-400 text-slate-100' :
-                                            isNeumorphic ? 'bg-[#e0e5ec] shadow-[inset_5px_5px_10px_#a3b1c6,inset_-5px_-5px_10px_#ffffff]' :
-                                            'bg-white border-2 border-black focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                                        }`}
-                                        aria-label="Filter content by keyword"
-                                        autoComplete="off"
-                                    />
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 space-x-2">
-                                        {isFetchingSemanticKeywords && (
-                                            <div role="status">
-                                                <div className={`animate-spin rounded-full h-5 w-5 border-b-2 ${isGlass ? 'border-sky-300' : 'border-blue-500'}`}></div>
-                                                <span className="sr-only">AI가 연관 검색어 찾는 중...</span>
-                                            </div>
-                                        )}
-                                        {inputValue && !isFetchingSemanticKeywords && (
-                                            <button
-                                                onClick={() => setInputValue('')}
-                                                className={`p-1 rounded-full transition-colors duration-200 ${isGlass ? 'text-slate-400 hover:text-white hover:bg-slate-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200'}`}
-                                                aria-label="검색어 지우기"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
-                                        )}
-                                    </div>
-                                    {showSuggestions && (
-                                        (suggestions.recent && suggestions.recent.length > 0) ||
-                                        (suggestions.popular && suggestions.popular.length > 0) ||
-                                        (suggestions.filtered && suggestions.filtered.length > 0)
-                                    ) && (
-                                        <div className={`absolute top-full left-0 w-full mt-2 rounded-2xl z-50 p-2 max-h-60 overflow-y-auto ${
-                                            isGlass ? 'bg-slate-800/95 backdrop-blur-lg border border-slate-600' :
-                                            isNeumorphic ? 'bg-[#e0e5ec] shadow-[8px_8px_16px_#a3b1c6,-8px_-8px_16px_#ffffff]' :
-                                            'bg-white border-2 border-black shadow-[4px_4px_0_#000]'
-                                        }`}>
-                                            {!inputValue ? (
-                                                <>
-                                                    {suggestions.recent && suggestions.recent.length > 0 && (
-                                                        <div>
-                                                            <h4 className={`px-2 pt-1 pb-2 text-xs font-bold ${isGlass ? 'text-slate-400' : 'text-gray-500'}`}>최근 검색어</h4>
-                                                            <ul role="listbox">
-                                                                {suggestions.recent.map((search, index) => (
-                                                                    <li key={`recent-${index}`} onClick={() => { setInputValue(search); setShowSuggestions(false); }} className={`p-2 text-sm rounded-lg cursor-pointer ${isGlass ? 'text-slate-300 hover:bg-sky-500/20' : 'text-gray-600 hover:bg-white/50'}`} role="option" aria-selected="false">{search}</li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                    )}
-                                                    {suggestions.popular && suggestions.popular.length > 0 && (
-                                                        <div className={suggestions.recent && suggestions.recent.length > 0 ? 'mt-2' : ''}>
-                                                            <h4 className={`px-2 pt-1 pb-2 text-xs font-bold ${isGlass ? 'text-slate-400' : 'text-gray-500'}`}>인기 키워드</h4>
-                                                            <ul role="listbox">
-                                                                {suggestions.popular.map((search, index) => (
-                                                                    <li key={`popular-${index}`} onClick={() => { setInputValue(search); setShowSuggestions(false); }} className={`p-2 text-sm rounded-lg cursor-pointer ${isGlass ? 'text-slate-300 hover:bg-sky-500/20' : 'text-gray-600 hover:bg-white/50'}`} role="option" aria-selected="false">{search}</li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                suggestions.filtered && suggestions.filtered.length > 0 && (
-                                                    <ul role="listbox">
-                                                        {suggestions.filtered.map((search, index) => (
-                                                            <li key={`filtered-${index}`} onClick={() => { setInputValue(search); setShowSuggestions(false); }} className={`p-2 text-sm rounded-lg cursor-pointer ${isGlass ? 'text-slate-300 hover:bg-sky-500/20' : 'text-gray-600 hover:bg-white/50'}`} role="option" aria-selected="false">{search}</li>
-                                                        ))}
-                                                    </ul>
-                                                )
-                                            )}
-                                        </div>
-                                    )}
+                     <section className={`sticky ${isBannerVisible ? 'top-[218px]' : isHeaderAndFilterVisible ? 'top-[144px]' : 'top-[64px]'} z-30 mb-8 p-4 rounded-2xl flex flex-col gap-4 transition-transform duration-300 ${isHeaderAndFilterVisible ? 'translate-y-0' : '-translate-y-full'} ${isGlass ? 'bg-slate-900/75 backdrop-blur-md border border-slate-700' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[8px_8px_16px_#a3b1c6]' : 'bg-white border-2 border-black'}`}>
+                        <div className="flex flex-col md:flex-row items-center gap-4">
+                            <div ref={searchContainerRef} className="relative w-full md:flex-1">
+                                <input type="text" placeholder="키워드로 전체 검색 (대회, 강좌, 코드)" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onFocus={() => setShowSuggestions(true)} className={`w-full pl-4 pr-12 py-3 rounded-lg focus:outline-none ${isGlass ? 'bg-slate-900/70 border border-slate-600/50 text-slate-100' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[inset_5px_5px_10px_#a3b1c6]' : 'bg-white border-2 border-black'}`} autoComplete="off" />
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                    {isFetchingSemanticKeywords && <div className={`animate-spin rounded-full h-5 w-5 border-b-2 ${isGlass ? 'border-sky-300' : 'border-blue-500'}`}></div>}
+                                    {inputValue && !isFetchingSemanticKeywords && <button onClick={() => setInputValue('')} className="p-1"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>}
                                 </div>
-                                {isCompetitionSortVisible && (
-                                    <div className="relative w-full md:w-auto hidden md:block">
-                                        <select
-                                            id="sort-select"
-                                            value={sortCriteria}
-                                            onChange={(e) => handleSortChange(e.target.value as SortCriteria)}
-                                            className={`w-full appearance-none pl-4 pr-10 py-3 rounded-lg focus:outline-none text-sm sm:text-base cursor-pointer ${
-                                                isGlass ? 'bg-slate-900/70 border border-slate-600/50 focus:ring-2 focus:ring-sky-400 text-slate-100' :
-                                                isNeumorphic ? 'bg-[#e0e5ec] shadow-[inset_5px_5px_10px_#a3b1c6,inset_-5px_-5px_10px_#ffffff]' :
-                                                'bg-white border-2 border-black focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                                            }`}
-                                            aria-label="Sort competitions"
-                                        >
-                                            <option value="startDateDesc">최신순</option>
-                                            <option value="endDateAsc">마감 임박순</option>
-                                            <option value="participantsDesc">참가자 많은 순</option>
-                                            <option value="prizeDesc">상금순</option>
-                                        </select>
-                                        <div className={`pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 ${isGlass ? 'text-slate-400' : 'text-gray-500'}`}>
-                                            <svg className="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                                        </div>
+                                {showSuggestions && (suggestions.recent?.length || suggestions.popular?.length || suggestions.filtered?.length) && (
+                                    <div className={`absolute top-full left-0 w-full mt-2 rounded-2xl z-50 p-2 max-h-60 overflow-y-auto ${isGlass ? 'bg-slate-800/95 border border-slate-600' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[8px_8px_16px_#a3b1c6]' : 'bg-white border-2 border-black shadow-[6px_6px_0_#000]'}`}>
+                                        {!inputValue ? (<>{suggestions.recent?.length > 0 && <div><h4 className="px-2 pt-1 pb-2 text-xs font-bold opacity-50">최근 검색어</h4>{suggestions.recent.map(s => <li key={s} onClick={() => { setInputValue(s); setShowSuggestions(false); }} className="p-2 text-sm rounded-lg cursor-pointer hover:bg-sky-500/10 list-none">{s}</li>)}</div>}{suggestions.popular?.length > 0 && <div className="mt-2"><h4 className="px-2 pt-1 pb-2 text-xs font-bold opacity-50">인기 키워드</h4>{suggestions.popular.map(s => <li key={s} onClick={() => { setInputValue(s); setShowSuggestions(false); }} className="p-2 text-sm rounded-lg cursor-pointer hover:bg-sky-500/10 list-none">{s}</li>)}</div>}</>) : (suggestions.filtered?.map(s => <li key={s} onClick={() => { setInputValue(s); setShowSuggestions(false); }} className="p-2 text-sm rounded-lg cursor-pointer hover:bg-sky-500/10 list-none">{s}</li>))}
                                     </div>
                                 )}
                             </div>
-                        )}
-
-                        <div className={`relative ${isSearchInputVisible ? `pt-4 border-t ${isGlass ? 'border-slate-700/50' : isNeumorphic ? 'border-gray-300/50' : 'border-black'}` : ''}`}>
+                            {viewMode === 'list' && <div className="relative hidden md:block"><select value={sortCriteria} onChange={(e) => handleSortClick(e.target.value as SortCriteria)} className={`appearance-none pl-4 pr-10 py-3 rounded-lg focus:outline-none cursor-pointer ${isGlass ? 'bg-slate-900/70 border border-slate-600/50 text-slate-100' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[inset_5px_5px_10px_#a3b1c6]' : 'bg-white border-2 border-black'}`}><option value="startDateDesc">최신순</option><option value="endDateAsc">마감 임박순</option><option value="participantsDesc">참가자 많은 순</option><option value="prizeDesc">상금순</option></select></div>}
+                        </div>
+                        <div className={`relative pt-4 border-t ${isGlass ? 'border-slate-700/50' : isNeumorphic ? 'border-gray-300/50' : 'border-black'}`}>
                              <div className="flex items-center justify-between gap-x-4">
                                 <div className="flex-1 overflow-x-auto custom-scrollbar">
-                                    <div className="inline-flex items-center gap-x-4 md:gap-x-6 gap-y-2 whitespace-nowrap md:flex-wrap md:whitespace-normal pb-2">
-                                        {/* Competition Group */}
-                                        <div className="inline-flex items-center gap-2">
-                                            <button onClick={handleCompetitionNavClick} className={getNavButtonClasses('대회')}>대회</button>
-                                            <button onClick={handleDataLinksToggle} className={`${getNavButtonClasses('데이터')} hidden md:flex`}>데이터</button>
-                                            <button onClick={() => handleViewChange('basecode')} className={`${getNavButtonClasses('코드')} hidden md:flex`}>코드</button>
-                                            <button onClick={() => handleViewChange('competition_roadmap')} className={getNavButtonClasses('참가 방법')}>참가 방법</button>
-                                        </div>
-                                        
+                                    <div className="inline-flex items-center gap-x-4 md:gap-x-6 pb-2">
+                                        <div className="inline-flex items-center gap-2"><button onClick={handleCompetitionNavClick} className={getNavButtonClasses('대회')}>대회</button><button onClick={handleDataLinksToggle} className={`${getNavButtonClasses('데이터')} hidden md:flex`}>데이터</button><button onClick={() => handleViewChange('basecode')} className={`${getNavButtonClasses('코드')} hidden md:flex`}>코드</button><button onClick={() => handleViewChange('competition_roadmap')} className={getNavButtonClasses('참가 방법')}>참가 방법</button></div>
                                         <div className={`h-5 w-px ${isGlass ? 'bg-slate-700' : 'bg-gray-300'} md:hidden`}></div>
-
-                                        {/* Learning Group */}
-                                        <div className="inline-flex items-center gap-2">
-                                            <button onClick={() => handleViewChange('dayschool', 'all')} className={getNavButtonClasses('학습')}>학습</button>
-                                            <button onClick={() => handleViewChange('dayschool', 'course')} className={`${getNavButtonClasses('강좌')} hidden md:flex`}>강좌</button>
-                                            <button onClick={() => handleViewChange('dayschool', 'hackathon')} className={`${getNavButtonClasses('해커톤')} hidden md:flex`}>해커톤</button>
-                                            <button onClick={() => handleViewChange('dayschool', 'lecture')} className={`${getNavButtonClasses('랭커특강')} hidden md:flex`}>랭커특강</button>
-                                            <button onClick={() => handleViewChange('roadmap')} className={getNavButtonClasses('로드맵')}>로드맵</button>
-                                        </div>
+                                        <div className="inline-flex items-center gap-2"><button onClick={() => handleViewChange('dayschool', 'all')} className={getNavButtonClasses('학습')}>학습</button><button onClick={() => handleViewChange('dayschool', 'course')} className={`${getNavButtonClasses('강좌')} hidden md:flex`}>강좌</button><button onClick={() => handleViewChange('dayschool', 'hackathon')} className={`${getNavButtonClasses('해커톤')} hidden md:flex`}>해커톤</button><button onClick={() => handleViewChange('dayschool', 'lecture')} className={`${getNavButtonClasses('랭커특강')} hidden md:flex`}>랭커특강</button><button onClick={() => handleViewChange('roadmap')} className={getNavButtonClasses('로드맵')}>로드맵</button></div>
                                     </div>
                                 </div>
-                                {viewMode === 'list' && (
-                                    <div className="ml-2 flex-shrink-0 hidden md:block">
-                                        <button 
-                                            onClick={() => setIsDetailFilterVisible(prev => !prev)}
-                                            className={`${getFilterButtonClasses(isDetailFilterVisible)} w-[133px] h-[35.5px] justify-center`}
-                                            aria-expanded={isDetailFilterVisible}
-                                            aria-controls="detail-filters"
-                                            title={isDetailFilterVisible ? '상세 필터 숨기기' : '상세 필터 보기'}
-                                        >
-                                            <span>상세필터</span>
-                                            {isDetailFilterVisible ? (
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                  <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-                                                </svg>
-                                            ) : (
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                </svg>
-                                            )}
-                                        </button>
-                                    </div>
-                                )}
+                                {viewMode === 'list' && <div className="ml-2 hidden md:block"><button onClick={() => setIsDetailFilterVisible(!isDetailFilterVisible)} className={getFilterButtonClasses(isDetailFilterVisible)}>상세필터</button></div>}
                             </div>
                         </div>
-
                         {viewMode === 'list' && isDetailFilterVisible && (
-                            <div id="detail-filters" className={`hidden md:block pt-4 border-t ${isGlass ? 'border-slate-700/50' : isNeumorphic ? 'border-gray-300/50' : 'border-black'}`}>
+                            <div className="hidden md:block pt-4 border-t border-gray-300/50">
                                 <div className="flex flex-wrap items-center justify-between gap-4">
-                                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className={`text-sm font-semibold mr-2 ${isGlass ? 'text-slate-300' : isNeumorphic ? 'text-gray-600' : 'text-black'}`}>상태:</span>
-                                            {(['all', 'ongoing', 'ended', 'practice'] as StatusFilter[]).map(s => (
-                                                <button key={s} onClick={() => handleStatusClick(s)} className={`${getFilterButtonClasses(statusFilter === s)} w-[74.35px] justify-center`} aria-pressed={statusFilter === s}>{ {all: '전체', ongoing: '진행중', ended: '종료', practice: '연습'}[s] }</button>
-                                            ))}
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className={`text-sm font-semibold mr-2 ${isGlass ? 'text-slate-300' : isNeumorphic ? 'text-gray-600' : 'text-black'}`}>유형:</span>
-                                            {(['all', 'algorithm', 'prompt', 'service', 'idea'] as CompetitionTypeFilter[]).map(t => (
-                                                <button key={t} onClick={() => handleTypeClick(t)} className={getFilterButtonClasses(typeFilter === t)} aria-pressed={typeFilter === t}>{ {all: '전체', algorithm: '알고리즘', prompt: '프롬프트', service: '개발', idea: '아이디어'}[t] }</button>
-                                            ))}
-                                        </div>
+                                    <div className="flex flex-wrap items-center gap-6">
+                                        <div className="flex items-center gap-2"><span className="text-sm font-semibold opacity-70">상태:</span>{(['all', 'ongoing', 'ended', 'practice'] as StatusFilter[]).map(s => <button key={s} onClick={() => handleStatusClick(s)} className={getFilterButtonClasses(statusFilter === s)}>{ {all: '전체', ongoing: '진행중', ended: '종료', practice: '연습'}[s] }</button>)}</div>
+                                        <div className="flex items-center gap-2"><span className="text-sm font-semibold opacity-70">유형:</span>{(['all', 'algorithm', 'prompt', 'service', 'idea'] as CompetitionTypeFilter[]).map(t => <button key={t} onClick={() => handleTypeClick(t)} className={getFilterButtonClasses(typeFilter === t)}>{ {all: '전체', algorithm: '알고리즘', prompt: '프롬프트', service: '개발', idea: '아이디어'}[t] }</button>)}</div>
                                     </div>
-                                    <div className="hidden md:flex items-center gap-2 flex-wrap">
-                                        <button onClick={handleReset} className={getFilterButtonClasses(false)}>초기화</button>
-                                        <button onClick={handleToggleManual} className={getFilterButtonClasses(isManualVisible)}>매뉴얼</button>
-                                    </div>
+                                    <div className="flex items-center gap-2"><button onClick={handleReset} className={getFilterButtonClasses(false)}>초기화</button><button onClick={handleToggleManual} className={getFilterButtonClasses(isManualVisible)}>매뉴얼</button></div>
                                 </div>
                             </div>
                         )}
                     </section>
-                    
                     {isManualVisible && <ManualModal isOpen={isManualVisible} onClose={handleToggleManual} theme={theme} />}
-
                     {isLoading && !allCompetitions.length && <LoadingSpinner theme={theme} />}
                     {error && <ErrorMessage message={error} theme={theme} />}
                     {!error && (
-                         <section aria-labelledby="results-heading" className={isFetchingSemanticKeywords ? 'ai-searching' : ''}>
-                            <h2 id="results-heading" className="sr-only">콘텐츠 목록 결과</h2>
-                            {viewMode === 'list' && (
-                                <CompetitionListView
-                                    filteredCompetitions={filteredCompetitions}
-                                    paginatedCompetitions={paginatedCompetitions}
-                                    currentPage={currentPage}
-                                    paginationTotalItems={paginationTotalItems}
-                                    hasActiveFilters={hasActiveFilters}
-                                    theme={theme}
-                                    showDataLinksOnly={showDataLinksOnly}
-                                    isLoading={isLoading}
-                                    aiTip={aiTip}
-                                    isFetchingAiTip={isFetchingAiTip}
-                                    aiTipError={aiTipError}
-                                    onStatusClick={handleStatusClick}
-                                    onKeywordClick={handleKeywordClick}
-                                    onSortClick={handleSortClick}
-                                    onPageChange={setCurrentPage}
-                                    onResetFilters={handleReset}
-                                />
-                            )}
-                            {viewMode === 'dayschool' && (
-                                <DaySchoolContentView
-                                    filteredDaySchoolCourses={filteredDaySchoolCourses}
-                                    paginatedDaySchoolCourses={paginatedDaySchoolCourses}
-                                    theme={theme}
-                                    popularDaySchoolKeywords={popularDaySchoolKeywords}
-                                    daySchoolKeywordFilter={daySchoolKeywordFilter}
-                                    handleDaySchoolKeywordClick={handleDaySchoolKeywordClick}
-                                    daySchoolDifficultyFilter={daySchoolDifficultyFilter}
-                                    handleDaySchoolDifficultyClick={handleDaySchoolDifficultyClick}
-                                    currentPage={currentPage}
-                                    daySchoolSortCriteria={daySchoolSortCriteria}
-                                    daySchoolSortDirection={daySchoolSortDirection}
-                                    handleDaySchoolSortChange={handleDaySchoolSortChange}
-                                    daySchoolTypeFilter={daySchoolTypeFilter}
-                                    handleDaySchoolTypeChange={handleDaySchoolTypeChange}
-                                    paginationTotalItems={paginationTotalItems}
-                                    onPageChange={setCurrentPage}
-                                    isLoading={isLoading}
-                                    onResetFilters={handleReset}
-                                    aiTip={aiTip}
-                                    isFetchingAiTip={isFetchingAiTip}
-                                    aiTipError={aiTipError}
-                                />
-                            )}
-                            {viewMode === 'basecode' && (
-                                <BaseCodeContentView
-                                    filteredBaseCode={filteredBaseCode}
-                                    paginatedBaseCode={paginatedBaseCode}
-                                    theme={theme}
-                                    baseCodeCategoryFilter={baseCodeCategoryFilter}
-                                    handleBaseCodeCategoryChange={handleBaseCodeCategoryChange}
-                                    currentPage={currentPage}
-                                    paginationTotalItems={paginationTotalItems}
-                                    onPageChange={setCurrentPage}
-                                    isLoading={isLoading}
-                                    onResetFilters={handleReset}
-                                    aiTip={aiTip}
-                                    isFetchingAiTip={isFetchingAiTip}
-                                    aiTipError={aiTipError}
-                                />
-                            )}
+                         <section className={isFetchingSemanticKeywords ? 'ai-searching' : ''}>
+                            {viewMode === 'list' && <CompetitionListView filteredCompetitions={filteredCompetitions} paginatedCompetitions={paginatedCompetitions} currentPage={currentPage} paginationTotalItems={paginationTotalItems} hasActiveFilters={!!keywordFilter.trim() || statusFilter !== 'all' || typeFilter !== 'all' || showDataLinksOnly} theme={theme} showDataLinksOnly={showDataLinksOnly} isLoading={isLoading} aiTip={aiTip} isFetchingAiTip={isFetchingAiTip} aiTipError={aiTipError} onStatusClick={handleStatusClick} onKeywordClick={handleKeywordClick} onSortClick={handleSortClick} onPageChange={setCurrentPage} onResetFilters={handleReset} />}
+                            {viewMode === 'dayschool' && <DaySchoolContentView filteredDaySchoolCourses={filteredDaySchoolCourses} paginatedDaySchoolCourses={paginatedDaySchoolCourses} theme={theme} popularDaySchoolKeywords={popularDaySchoolKeywords} daySchoolKeywordFilter={daySchoolKeywordFilter} handleDaySchoolKeywordClick={handleDaySchoolKeywordClick} daySchoolDifficultyFilter={daySchoolDifficultyFilter} handleDaySchoolDifficultyClick={handleDaySchoolDifficultyClick} currentPage={currentPage} daySchoolSortCriteria={daySchoolSortCriteria} daySchoolSortDirection={daySchoolSortDirection} handleDaySchoolSortChange={handleDaySchoolSortChange} daySchoolTypeFilter={daySchoolTypeFilter} handleDaySchoolTypeChange={handleDaySchoolTypeChange} paginationTotalItems={paginationTotalItems} onPageChange={setCurrentPage} isLoading={isLoading} onResetFilters={handleReset} aiTip={aiTip} isFetchingAiTip={isFetchingAiTip} aiTipError={aiTipError} />}
+                            {viewMode === 'basecode' && <BaseCodeContentView filteredBaseCode={filteredBaseCode} paginatedBaseCode={paginatedBaseCode} theme={theme} baseCodeCategoryFilter={baseCodeCategoryFilter} handleBaseCodeCategoryChange={handleBaseCodeCategoryChange} currentPage={currentPage} paginationTotalItems={paginationTotalItems} onPageChange={setCurrentPage} isLoading={isLoading} onResetFilters={handleReset} aiTip={aiTip} isFetchingAiTip={isFetchingAiTip} aiTipError={aiTipError} />}
                             {viewMode === 'roadmap' && <RoadmapView theme={theme} />}
                             {viewMode === 'competition_roadmap' && <CompetitionRoadmapView theme={theme} />}
                         </section>
                     )}
                 </div>
             </main>
-
             <Footer theme={theme} />
         </>
     );
