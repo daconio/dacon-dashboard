@@ -1,14 +1,13 @@
 import React from 'react';
-
-type Theme = 'glass' | 'neumorphic' | 'webtoon';
+import type { Theme } from '../types';
 
 interface FooterProps {
     theme: Theme;
 }
 
 const Footer: React.FC<FooterProps> = ({ theme }) => {
-    const isGlass = theme === 'glass';
-    const isNeumorphic = theme === 'neumorphic';
+    const isGlass = theme === 'dark';
+    const isNeumorphic = theme === 'light';
     
     const footerClasses = isGlass
         ? "bg-transparent text-slate-400 mt-12 border-t border-slate-700/50"

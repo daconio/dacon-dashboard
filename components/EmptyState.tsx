@@ -1,6 +1,5 @@
 import React from 'react';
-
-type Theme = 'glass' | 'neumorphic' | 'webtoon';
+import type { Theme } from '../types';
 
 interface EmptyStateProps {
     aiTip: { title: string; content: string } | null;
@@ -11,8 +10,8 @@ interface EmptyStateProps {
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({ aiTip, isFetchingAiTip, aiTipError, theme, onResetFilters }) => {
-    const isGlass = theme === 'glass';
-    const isNeumorphic = theme === 'neumorphic';
+    const isGlass = theme === 'dark';
+    const isNeumorphic = theme === 'light';
 
     const containerClasses = isGlass
         ? "text-center py-12 px-6 bg-slate-800/40 backdrop-blur-lg rounded-2xl border border-slate-500/20 shadow-2xl flex flex-col items-center justify-center"

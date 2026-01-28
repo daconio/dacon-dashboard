@@ -1,6 +1,5 @@
 import React from 'react';
-
-type Theme = 'glass' | 'neumorphic' | 'webtoon';
+import type { Theme } from '../types';
 
 interface ManualModalProps {
     isOpen: boolean;
@@ -13,8 +12,8 @@ const ManualModal: React.FC<ManualModalProps> = ({ isOpen, onClose, theme }) => 
         return null;
     }
 
-    const isGlass = theme === 'glass';
-    const isNeumorphic = theme === 'neumorphic';
+    const isGlass = theme === 'dark';
+    const isNeumorphic = theme === 'light';
 
     const ManualSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
         <div className="mb-6">

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-
-type Theme = 'glass' | 'neumorphic' | 'webtoon';
+import type { Theme } from '../types';
 
 interface KnowledgeCardProps {
     animationIndex: number;
@@ -48,8 +47,8 @@ const WittyQuoteCard: React.FC<KnowledgeCardProps> = ({ animationIndex, classNam
         getRandomTip();
     };
     
-    const isGlass = theme === 'glass';
-    const isNeumorphic = theme === 'neumorphic';
+    const isGlass = theme === 'dark';
+    const isNeumorphic = theme === 'light';
 
     const baseClasses = isGlass
         ? `bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 rounded-2xl shadow-2xl shadow-indigo-500/20 transition-all duration-300 flex flex-col h-full p-6 items-center justify-center text-center relative border border-purple-400/30`

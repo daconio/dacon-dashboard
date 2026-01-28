@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
-type Theme = 'glass' | 'neumorphic' | 'webtoon';
+import type { Theme } from '../types';
 
 interface RealTimeClockProps {
     theme: Theme;
@@ -28,7 +27,7 @@ const RealTimeClock: React.FC<RealTimeClockProps> = ({ theme }) => {
         return `${year}-${month}-${day} ${hour}:${minute}:${second}.${centisecond}`;
     };
     
-    const textColor = theme === 'glass' ? 'text-slate-400' : theme === 'neumorphic' ? 'text-gray-500' : 'text-gray-600';
+    const textColor = theme === 'dark' ? 'text-slate-400' : theme === 'light' ? 'text-gray-500' : 'text-gray-600';
 
     return (
         <div className={`text-xs ${textColor}`} role="timer" aria-live="off">

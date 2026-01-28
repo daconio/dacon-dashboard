@@ -1,130 +1,102 @@
 
 import React from 'react';
-import type { ViewMode } from '../types';
-
-type Theme = 'glass' | 'neumorphic' | 'webtoon';
-type DaySchoolTypeFilter = 'all' | 'course' | 'hackathon' | 'lecture';
+import type { ViewMode, Theme } from '../types';
 
 interface SidebarProps {
     theme: Theme;
     viewMode: ViewMode;
-    showDataLinksOnly: boolean;
-    daySchoolTypeFilter: DaySchoolTypeFilter;
-    onCompetitionClick: () => void;
-    onDataLinksToggle: () => void;
-    onViewChange: (view: ViewMode, type?: DaySchoolTypeFilter) => void;
-    isHeaderVisible: boolean;
+    onViewChange: (view: ViewMode) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
-    theme,
-    viewMode,
-    showDataLinksOnly,
-    daySchoolTypeFilter,
-    onCompetitionClick,
-    onDataLinksToggle,
-    onViewChange,
-    isHeaderVisible
-}) => {
-    const isGlass = theme === 'glass';
-    const isNeumorphic = theme === 'neumorphic';
+const Sidebar: React.FC<SidebarProps> = ({ theme, viewMode, onViewChange }) => {
+    
+    const menuItemClasses = `flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all mb-1 
+        ${theme === 'brutal' ? 'hover:bg-gray-200 border-2 border-transparent hover:border-black text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-200'}`;
+    
+    const activeItemClasses = theme === 'brutal'
+        ? 'bg-blue-600 text-white border-2 border-black shadow-[4px_4px_0_#000]'
+        : 'bg-blue-600 text-white shadow-md';
 
-    const getButtonClasses = (active: boolean, type: 'comp' | 'edu' = 'comp') => {
-        const base = `w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-300 mb-2 text-left`;
-        const webtoonBase = `w-full flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-lg transition-all duration-200 border-2 border-black mb-2 text-left`;
-        
-        if (isGlass) {
-            const activeColor = type === 'comp' ? 'bg-sky-500/40 border-sky-400' : 'bg-amber-500/40 border-amber-400';
-            return `${base} border ${active ? `${activeColor} text-white shadow-lg shadow-sky-500/20` : 'bg-transparent text-slate-400 border-transparent hover:bg-slate-800/50 hover:text-slate-200'}`;
-        }
-        if (isNeumorphic) {
-            const activeShadow = 'shadow-[inset_5px_5px_10px_#a3b1c6,inset_-5px_-5px_10px_#ffffff]';
-            const idleShadow = 'shadow-[5px_5px_10px_#a3b1c6,-5px_-5px_10px_#ffffff]';
-            return `${base} ${active ? `${activeShadow} ${type === 'comp' ? 'text-blue-600' : 'text-amber-600'}` : `${idleShadow} text-gray-600 hover:text-gray-900`}`;
-        }
-        // Webtoon
-        const activeColor = type === 'comp' ? 'bg-blue-500 text-white' : 'bg-yellow-400 text-black';
-        return `${webtoonBase} ${active ? `${activeColor} shadow-[4px_4px_0_#000]` : 'bg-white text-black hover:bg-gray-100'}`;
-    };
-
-    const sidebarClasses = isGlass
-        ? `w-64 fixed left-0 h-full z-40 pt-[180px] pb-8 px-4 bg-slate-900/60 backdrop-blur-xl border-r border-slate-700/50 transition-all duration-300`
-        : isNeumorphic
-        ? `w-64 fixed left-0 h-full z-40 pt-[180px] pb-8 px-4 bg-[#e0e5ec] border-r border-gray-300/50 transition-all duration-300`
-        : `w-64 fixed left-0 h-full z-40 pt-[180px] pb-8 px-4 bg-white border-r-2 border-black transition-all duration-300`;
-
-    const sectionTitleClasses = isGlass
-        ? "text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2"
-        : isNeumorphic
-        ? "text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 px-2"
-        : "text-[11px] font-black text-black uppercase tracking-widest mb-4 px-2";
+    const countBadgeClasses = (isActive: boolean) => `px-2 py-0.5 text-xs rounded-md font-bold ${
+        isActive 
+        ? 'bg-white/20 text-white' 
+        : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 theme-brutal:bg-gray-300 theme-brutal:text-black theme-brutal:border theme-brutal:border-black'
+    }`;
 
     return (
-        <aside className={`${sidebarClasses} ${!isHeaderVisible ? 'translate-y-[-80px]' : ''} hidden lg:block`}>
-            <div className="h-full overflow-y-auto custom-scrollbar pr-1">
-                {/* 대회 그룹 */}
-                <section className="mb-10">
-                    <h3 className={sectionTitleClasses}>Competitions</h3>
-                    <button 
-                        onClick={onCompetitionClick} 
-                        className={getButtonClasses(viewMode === 'list' && !showDataLinksOnly)}
-                    >
-                        <span className="text-lg">🏆</span> 대회
+        <aside className="w-64 fixed left-0 top-16 h-[calc(100vh-64px)] z-40 p-4 overflow-y-auto hidden lg:flex flex-col gap-6 border-r"
+            style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRightWidth: theme === 'brutal' ? '2px' : '1px' }}
+        >
+            {/* Hackathon Menu */}
+            <section>
+                <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 px-2 theme-brutal:text-black">해커톤 메뉴</h3>
+                <nav className="space-y-1">
+                    <button className={menuItemClasses}>
+                        <span>내가 참가한 해커톤</span>
+                        <span className={countBadgeClasses(false)}>1</span>
                     </button>
-                    <button 
-                        onClick={onDataLinksToggle} 
-                        className={getButtonClasses(viewMode === 'list' && showDataLinksOnly)}
-                    >
-                        <span className="text-lg">💾</span> 데이터
+                    <button className={`${menuItemClasses} ${viewMode === 'list' ? activeItemClasses : ''}`} onClick={() => onViewChange('list')}>
+                        <span>전체</span>
+                        <span className={countBadgeClasses(viewMode === 'list')}>3</span>
                     </button>
-                    <button 
-                        onClick={() => onViewChange('basecode')} 
-                        className={getButtonClasses(viewMode === 'basecode')}
-                    >
-                        <span className="text-lg">💻</span> 코드
+                    <button className={menuItemClasses}>
+                        <span>모집중</span>
+                        <span className={countBadgeClasses(false)}>2</span>
                     </button>
-                    <button 
-                        onClick={() => onViewChange('competition_roadmap')} 
-                        className={getButtonClasses(viewMode === 'competition_roadmap')}
-                    >
-                        <span className="text-lg">🗺️</span> 참가 방법
+                    <button className={menuItemClasses}>
+                        <span>접수대기</span>
+                        <span className={countBadgeClasses(false)}>0</span>
                     </button>
-                </section>
+                    <button className={menuItemClasses}>
+                        <span>종료</span>
+                        <span className={countBadgeClasses(false)}>1</span>
+                    </button>
+                </nav>
+            </section>
 
-                {/* 학습 그룹 */}
-                <section>
-                    <h3 className={sectionTitleClasses}>Learning</h3>
-                    <button 
-                        onClick={() => onViewChange('dayschool', 'all')} 
-                        className={getButtonClasses(viewMode === 'dayschool' && daySchoolTypeFilter === 'all', 'edu')}
-                    >
-                        <span className="text-lg">📚</span> 학습
-                    </button>
-                    <button 
-                        onClick={() => onViewChange('dayschool', 'course')} 
-                        className={getButtonClasses(viewMode === 'dayschool' && daySchoolTypeFilter === 'course', 'edu')}
-                    >
-                        <span className="text-lg">📖</span> 강좌
-                    </button>
-                    <button 
-                        onClick={() => onViewChange('dayschool', 'hackathon')} 
-                        className={getButtonClasses(viewMode === 'dayschool' && daySchoolTypeFilter === 'hackathon', 'edu')}
-                    >
-                        <span className="text-lg">🚩</span> 해커톤
-                    </button>
-                    <button 
-                        onClick={() => onViewChange('dayschool', 'lecture')} 
-                        className={getButtonClasses(viewMode === 'dayschool' && daySchoolTypeFilter === 'lecture', 'edu')}
-                    >
-                        <span className="text-lg">🎙️</span> 랭커특강
-                    </button>
-                    <button 
-                        onClick={() => onViewChange('roadmap')} 
-                        className={getButtonClasses(viewMode === 'roadmap', 'edu')}
-                    >
-                        <span className="text-lg">🎯</span> 로드맵
-                    </button>
-                </section>
+            {/* Guide Box */}
+            <div className={`p-4 rounded-xl border ${theme === 'brutal' ? 'bg-yellow-100 border-2 border-black shadow-[4px_4px_0_#000]' : 'bg-orange-50 border-orange-100 dark:bg-gray-800 dark:border-gray-700'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="text-orange-500">❓</span>
+                    <h4 className="font-bold text-sm dark:text-gray-200 theme-brutal:text-black">해커톤 가이드</h4>
+                </div>
+                <button className={`w-full py-2 text-xs font-bold rounded-lg mt-2 transition-transform active:scale-95 ${
+                    theme === 'brutal' ? 'bg-yellow-300 border-2 border-black text-black hover:bg-yellow-400' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-300'
+                }`}>
+                    자세히 알아보기 →
+                </button>
+            </div>
+
+            {/* My Hosted Hackathons */}
+            <button className={`w-full py-3 px-4 rounded-xl font-bold text-sm text-left border transition-all ${
+                theme === 'brutal' ? 'bg-white border-2 border-black shadow-[4px_4px_0_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
+            }`}>
+                내가 주최한 해커톤
+            </button>
+
+            {/* Profile Card (Bottom) */}
+            <div className="mt-auto">
+                <div className={`p-4 rounded-xl border flex items-center gap-3 ${
+                    theme === 'brutal' ? 'bg-white border-2 border-black shadow-[4px_4px_0_#000]' : 'bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700'
+                }`}>
+                    <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold shrink-0 theme-brutal:border-2 theme-brutal:border-black">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar" className="w-full h-full rounded-full" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="font-bold text-sm truncate dark:text-white theme-brutal:text-black">도비콘</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 theme-brutal:text-black">
+                            <span className="font-mono">👁 90</span>
+                            <span>|</span>
+                            <span>신뢰 <span className="text-blue-500 font-bold">0.71</span></span>
+                        </div>
+                        <div className="w-full bg-gray-200 h-1.5 rounded-full mt-2 overflow-hidden dark:bg-gray-700 theme-brutal:border theme-brutal:border-black theme-brutal:h-2.5">
+                            <div className="bg-green-500 h-full w-[70%]"></div>
+                        </div>
+                        <div className="text-[10px] text-right text-gray-400 mt-1 dark:text-gray-500 theme-brutal:text-black">10,383 XP → Gold</div>
+                    </div>
+                </div>
             </div>
         </aside>
     );

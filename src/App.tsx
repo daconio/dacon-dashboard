@@ -1,7 +1,5 @@
-
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import type { Competition } from './types';
+import type { Competition, Theme } from './types';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CompetitionCard from './components/CompetitionCard';
@@ -14,6 +12,10 @@ import ViewSwitcher from './components/ViewSwitcher';
 import CalendarView from './components/CalendarView';
 import ManualModal from './components/ManualModal';
 import WittyQuoteCard from './components/WittyQuoteCard';
+import UpcomingCompetitionCard from './components/UpcomingCompetitionCard';
+import DaySchoolView from './components/DaySchoolView';
+import BaseCodeView from './components/BaseCodeView';
+import RoadmapView from './components/RoadmapView';
 // FIX: Import GenerateContentResponse to explicitly type the API response.
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
@@ -48,6 +50,7 @@ const isStringArray = (value: any): value is string[] =>
     Array.isArray(value) && value.every(item => typeof item === 'string');
 
 const App: React.FC = () => {
+    const [theme, setTheme] = useState<Theme>('brutal');
     const [allCompetitions, setAllCompetitions] = useState<Competition[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -90,6 +93,10 @@ const App: React.FC = () => {
     const [semanticKeywords, setSemanticKeywords] = useState<string[]>([]);
 
     const isInitialMount = useRef(true);
+
+    useEffect(() => {
+        document.body.className = `theme-${theme}`;
+    }, [theme]);
 
     const fetchAllCompetitions = useCallback(async () => {
         setIsLoading(true);
@@ -492,7 +499,7 @@ const App: React.FC = () => {
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
                         </div>
                     )}
-                    <RealTimeClock />
+                    <RealTimeClock theme={theme} />
                     {showSuggestions && (
                         (suggestions.recent && suggestions.recent.length > 0) ||
                         (suggestions.popular && suggestions.popular.length > 0) ||
@@ -601,8 +608,8 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
-                    <DateRangePicker value={dateRange} onChange={setDateRange} />
-                    <ViewSwitcher currentView={viewMode} onViewChange={setViewMode} />
+                    <DateRangePicker value={dateRange} onChange={setDateRange} theme={theme} />
+                    <ViewSwitcher currentView={viewMode} onViewChange={setViewMode} theme={theme} />
                      <button 
                         onClick={handleToggleManual}
                         className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-semibold transition-all duration-300 transform shadow-[5px_5px_10px_#a3b1c6,-5px_-5px_10px_#ffffff] hover:shadow-[15px_15px_30px_#a3b1c6,-15px_-15px_30px_#ffffff] hover:-translate-y-2 active:shadow-[inset_5px_5px_10px_#a3b1c6,inset_-5px_-5px_10px_#ffffff]"
@@ -623,15 +630,15 @@ const App: React.FC = () => {
 
     return (
         <>
-            <Header tickerStats={tickerStats} />
+            <Header tickerStats={tickerStats} theme={theme} setTheme={setTheme} />
             <main className="p-4 sm:p-6 md:p-8 lg:p-12">
                 <div className="max-w-7xl mx-auto">
                     {renderFilterControls()}
                     
-                    {isManualVisible && <ManualModal isOpen={isManualVisible} onClose={handleToggleManual} />}
+                    {isManualVisible && <ManualModal isOpen={isManualVisible} onClose={handleToggleManual} theme={theme} />}
 
-                    {isLoading && !allCompetitions.length && <LoadingSpinner />}
-                    {error && <ErrorMessage message={error} />}
+                    {isLoading && !allCompetitions.length && <LoadingSpinner theme={theme} />}
+                    {error && <ErrorMessage message={error} theme={theme} />}
                     {!error && (
                          <>
                             {filteredCompetitions.length > 0 ? (
@@ -645,7 +652,8 @@ const App: React.FC = () => {
                                             <div id="competitions-container" className="grid gap-6 md:gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                                                 {currentPage === 1 && filteredCompetitions.length > 0 ? (
                                                     <>
-                                                        <WittyQuoteCard key="witty-quote" animationIndex={0} />
+                                                        <UpcomingCompetitionCard animationIndex={0} theme={theme} />
+                                                        <WittyQuoteCard key="witty-quote" animationIndex={0} theme={theme} />
                                                         {paginatedCompetitions.map((comp, index) => (
                                                             <CompetitionCard 
                                                                 key={comp.cpt_id} 
@@ -654,6 +662,7 @@ const App: React.FC = () => {
                                                                 onKeywordClick={handleKeywordClick}
                                                                 onSortClick={handleSortClick}
                                                                 animationIndex={index + 1}
+                                                                theme={theme}
                                                             />
                                                         ))}
                                                     </>
@@ -666,6 +675,7 @@ const App: React.FC = () => {
                                                             onKeywordClick={handleKeywordClick}
                                                             onSortClick={handleSortClick}
                                                             animationIndex={index}
+                                                            theme={theme}
                                                         />
                                                     ))
                                                 )}
@@ -675,6 +685,7 @@ const App: React.FC = () => {
                                                 totalItems={paginationTotalItems}
                                                 itemsPerPage={ITEMS_PER_PAGE}
                                                 onPageChange={setCurrentPage}
+                                                theme={theme}
                                             />
                                         </>
                                     ) : (
@@ -693,7 +704,29 @@ const App: React.FC = () => {
                     )}
                 </div>
             </main>
-            <Footer />
+            <DaySchoolView 
+                courses={[]} // Placeholder
+                theme={theme}
+                keywords={[]}
+                selectedKeyword={null}
+                onKeywordClick={()=>{}}
+                selectedDifficulty={null}
+                onDifficultyClick={()=>{}}
+                currentPage={1}
+                sortCriteria={'status'}
+                sortDirection={'desc'}
+                onSortChange={()=>{}}
+                selectedType={'all'}
+                onTypeChange={()=>{}}
+            />
+            <BaseCodeView 
+                items={[]} // Placeholder
+                theme={theme}
+                selectedCategory={'all'}
+                onCategoryChange={()=>{}}
+            />
+            <RoadmapView theme={theme} />
+            <Footer theme={theme} />
         </>
     );
 };

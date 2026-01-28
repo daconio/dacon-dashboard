@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import DaySchoolCard from './DaySchoolCard';
 import { personas, PersonaData, RoadmapStage } from '../data/roadmapData';
-
-type Theme = 'glass' | 'neumorphic' | 'webtoon';
+import type { Theme } from '../types';
 
 interface RoadmapViewProps {
     theme: Theme;
 }
 
 const StageIcon: React.FC<{ icon: string, theme: Theme }> = ({ icon, theme }) => {
-    const iconColor = theme === 'glass' ? 'currentColor' : theme === 'neumorphic' ? '#5a67d8' : '#000000';
+    const iconColor = theme === 'dark' ? 'currentColor' : theme === 'light' ? '#5a67d8' : '#000000';
     const iconMap: { [key: string]: React.ReactNode } = {
         sapling: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke={iconColor} strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.121 15.536A9.004 9.004 0 0112 15c-1.248 0-2.428.213-3.536.608M12 3v12m0 0l-3.536-3.536M12 15l3.536-3.536" /></svg>,
         compass: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke={iconColor} strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12L9 9l-3 6 6 3 3-6z" /></svg>,
@@ -38,8 +37,8 @@ const RoadmapDisplay: React.FC<{ persona: PersonaData, theme: Theme, onReset: ()
     
     const getResetButtonClasses = () => {
         const base = "inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 transform mb-8";
-        if (theme === 'glass') return `${base} bg-slate-700/50 text-slate-200 border border-slate-600/50 hover:bg-slate-600/50`;
-        if (theme === 'neumorphic') return `${base} shadow-[5px_5px_10px_#a3b1c6,-5px_-5px_10px_#ffffff] hover:shadow-[8px_8px_16px_#a3b1c6,-8px_-8px_16px_#ffffff] hover:-translate-y-1 active:shadow-[inset_5px_5px_10px_#a3b1c6,inset_-5px_-5px_10px_#ffffff]`;
+        if (theme === 'dark') return `${base} bg-slate-700/50 text-slate-200 border border-slate-600/50 hover:bg-slate-600/50`;
+        if (theme === 'light') return `${base} shadow-[5px_5px_10px_#a3b1c6,-5px_-5px_10px_#ffffff] hover:shadow-[8px_8px_16px_#a3b1c6,-8px_-8px_16px_#ffffff] hover:-translate-y-1 active:shadow-[inset_5px_5px_10px_#a3b1c6,inset_-5px_-5px_10px_#ffffff]`;
         return `${base} bg-white text-black border-2 border-black hover:bg-gray-100`;
     };
     
@@ -54,10 +53,10 @@ const RoadmapDisplay: React.FC<{ persona: PersonaData, theme: Theme, onReset: ()
                         다른 경로 선택
                     </button>
                 </div>
-                 <h2 className={`text-3xl font-bold mb-2 ${theme === 'glass' ? 'text-slate-100 text-shadow-elegant' : theme === 'neumorphic' ? 'text-slate-700 text-shadow-soft' : 'text-black'}`}>
+                 <h2 className={`text-3xl font-bold mb-2 ${theme === 'dark' ? 'text-slate-100 text-shadow-elegant' : theme === 'light' ? 'text-slate-700 text-shadow-soft' : 'text-black'}`}>
                     {persona.title} 로드맵
                 </h2>
-                <p className={`max-w-3xl mx-auto text-lg ${theme === 'glass' ? 'text-slate-300' : theme === 'neumorphic' ? 'text-gray-600' : 'text-gray-800'}`}>
+                <p className={`max-w-3xl mx-auto text-lg ${theme === 'dark' ? 'text-slate-300' : theme === 'light' ? 'text-gray-600' : 'text-gray-800'}`}>
                     {persona.longDescription}
                 </p>
             </header>
@@ -70,10 +69,10 @@ const RoadmapDisplay: React.FC<{ persona: PersonaData, theme: Theme, onReset: ()
                                 <StageIcon icon={stage.icon} theme={theme} />
                             </div>
                             <div className="text-center mb-8">
-                                <h3 className={`text-2xl font-bold ${theme === 'glass' ? 'text-sky-300' : theme === 'neumorphic' ? 'text-blue-600' : 'text-black'}`}>
+                                <h3 className={`text-2xl font-bold ${theme === 'dark' ? 'text-sky-300' : theme === 'light' ? 'text-blue-600' : 'text-black'}`}>
                                     {stage.title}
                                 </h3>
-                                <p className={`mt-2 text-sm max-w-xl ${theme === 'glass' ? 'text-slate-400' : theme === 'neumorphic' ? 'text-gray-500' : 'text-gray-600'}`}>
+                                <p className={`mt-2 text-sm max-w-xl ${theme === 'dark' ? 'text-slate-400' : theme === 'light' ? 'text-gray-500' : 'text-gray-600'}`}>
                                     {stage.description}
                                 </p>
                             </div>
@@ -124,10 +123,10 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ theme }) => {
         return (
             <div className="animate-fadeInUp">
                 <header className="text-center mb-12">
-                    <h2 className={`text-3xl font-bold mb-4 ${theme === 'glass' ? 'text-slate-100 text-shadow-elegant' : theme === 'neumorphic' ? 'text-slate-700 text-shadow-soft' : 'text-black'}`}>
+                    <h2 className={`text-3xl font-bold mb-4 ${theme === 'dark' ? 'text-slate-100 text-shadow-elegant' : theme === 'light' ? 'text-slate-700 text-shadow-soft' : 'text-black'}`}>
                         AI 탐험가 로드맵
                     </h2>
-                    <p className={`max-w-3xl mx-auto ${theme === 'glass' ? 'text-slate-300' : theme === 'neumorphic' ? 'text-gray-600' : 'text-gray-800'}`}>
+                    <p className={`max-w-3xl mx-auto ${theme === 'dark' ? 'text-slate-300' : theme === 'light' ? 'text-gray-600' : 'text-gray-800'}`}>
                         AI 세계를 탐험하는 모험가님, 환영합니다! 당신의 목표는 무엇인가요?
                         <br />
                         아래 페르소나 중 하나를 선택하여 당신만의 맞춤형 학습 여정을 시작해보세요.
