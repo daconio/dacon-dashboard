@@ -14,6 +14,7 @@ import EmptyState from './components/EmptyState';
 import DaySchoolView from './components/DaySchoolView';
 import RoadmapView from './components/RoadmapView';
 import BaseCodeView from './components/BaseCodeView';
+import Sidebar from './components/Sidebar';
 import { staticCompetitions } from './data/staticCompetitions';
 import { baseCodeData } from './data/baseCodeData';
 import { daySchoolCourses } from './data/daySchoolCourses';
@@ -169,7 +170,7 @@ const CompetitionListView: React.FC<CompetitionListViewProps> = ({
       <div className={`mb-4 text-sm ${theme === 'glass' ? 'text-slate-400' : 'text-gray-500'}`} role="status">
         총 {filteredCompetitions.length}개의 경진대회를 찾았습니다.
       </div>
-      <div id="competitions-container" className="grid gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div id="competitions-container" className="grid gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {isFirstPageDefault ? (
           <>
             {ongoingOnFirstPage.map((comp, index) => (
@@ -378,7 +379,6 @@ const App: React.FC = () => {
     const isInitialMount = useRef(true);
     const [isDetailFilterVisible, setIsDetailFilterVisible] = useState(true);
 
-    // FIX: Define handleToggleManual to fix "Cannot find name 'handleToggleManual'"
     const handleToggleManual = useCallback(() => {
         setIsManualVisible(prev => !prev);
     }, []);
@@ -607,7 +607,6 @@ const App: React.FC = () => {
         fetchSemanticKeywords();
     }, [keywordFilter, addToast]);
 
-    // FIX: Define suggestions useMemo to fix "Cannot find name 'suggestions'"
     const suggestions = useMemo(() => {
         if (!inputValue) {
             return {
@@ -641,7 +640,6 @@ const App: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
     
-    // FIX: Renamed handleSortChange to handleSortClick to fix "Cannot find name 'handleSortClick'"
     const handleSortClick = useCallback((criteria: SortCriteria) => { setSortCriteria(criteria); addToast(`정렬 기준: ${{startDateDesc: '최신순', endDateAsc: '마감 임박순', participantsDesc: '참가자 많은 순', prizeDesc: '상금순'}[criteria]}`); }, [addToast]);
 
     const filteredCompetitions = useMemo(() => {
@@ -846,32 +844,7 @@ const App: React.FC = () => {
 
     const isGlass = theme === 'glass';
     const isNeumorphic = theme === 'neumorphic';
-    const getNavButtonClasses = (buttonView: string) => {
-        let active = false;
-        switch (buttonView) {
-            case '대회': active = (viewMode === 'list' && !showDataLinksOnly) || viewMode === 'competition_roadmap' || viewMode === 'basecode'; break;
-            case '데이터': active = viewMode === 'list' && showDataLinksOnly; break;
-            case '코드': active = viewMode === 'basecode'; break;
-            case '참가 방법': active = viewMode === 'competition_roadmap'; break;
-            case '학습': active = viewMode === 'dayschool' || viewMode === 'roadmap'; break;
-            case '강좌': active = viewMode === 'dayschool' && daySchoolTypeFilter === 'course'; break;
-            case '해커톤': active = viewMode === 'dayschool' && daySchoolTypeFilter === 'hackathon'; break;
-            case '랭커특강': active = viewMode === 'dayschool' && daySchoolTypeFilter === 'lecture'; break;
-            case '로드맵': active = viewMode === 'roadmap'; break;
-        }
-        const base = `px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-semibold rounded-lg transition-all duration-300 transform flex items-center gap-2`;
-        const webtoonBase = `px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-bold rounded-md transition-all duration-200 border-2 border-black`;
-        const learning = ['학습', '강좌', '해커톤', '랭커특강', '로드맵'].includes(buttonView);
-        const activeLearningColor = 'bg-[rgb(253,224,72,0.73)]';
-        if (learning) {
-            if (isGlass) return `${base} border ${active ? `${activeLearningColor} text-black font-bold border-yellow-400` : 'bg-slate-800/40 text-slate-200 border-slate-700'}`;
-            if (isNeumorphic) return `${base} ${active ? `shadow-[inset_5px_5px_10px_#a3b1c6] text-black ${activeLearningColor}` : 'shadow-[5px_5px_10px_#a3b1c6] text-gray-700'}`;
-            return `${webtoonBase} ${active ? `${activeLearningColor} text-black shadow-[3px_3px_0_#000]` : 'bg-white'}`;
-        }
-        if (isGlass) return `${base} border ${active ? 'bg-sky-500/60 text-white border-sky-400' : 'bg-slate-800/40 text-slate-200 border-slate-700'}`;
-        if (isNeumorphic) return `${base} ${active ? `shadow-[inset_5px_5px_10px_#a3b1c6] text-blue-600` : 'shadow-[5px_5px_10px_#a3b1c6] text-gray-700'}`;
-        return `${webtoonBase} ${active ? 'bg-blue-500 text-white shadow-[3px_3px_0_#000]' : 'bg-white'}`;
-    };
+    
     const getFilterButtonClasses = (isActive: boolean) => {
         const base = `px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-semibold rounded-lg transition-all duration-300 transform flex items-center gap-2`;
         if (isGlass) return `${base} border ${isActive ? 'bg-sky-500/60 text-white border-sky-400' : 'bg-slate-800/50 text-slate-200 border-slate-700'}`;
@@ -880,69 +853,82 @@ const App: React.FC = () => {
     };
 
     return (
-        <>
+        <div className="flex flex-col min-h-screen">
             <div aria-live="polite" className="fixed top-20 right-4 z-[100] space-y-2">
                 {toasts.map(t => <Toast key={t.id} {...t} onClose={removeToast} theme={theme} />)}
             </div>
             <Header bannerText={bannerText} tickerItems={tickerItems} theme={theme} setTheme={setTheme} onCompetitionClick={handleCompetitionNavClick} onLearningClick={() => handleViewChange('dayschool')} isBannerVisible={isBannerVisible} isHeaderContentVisible={isHeaderAndFilterVisible} />
-            <main className={`transition-all duration-300 ${isBannerVisible ? 'pt-[218px]' : isHeaderAndFilterVisible ? 'pt-[144px]' : 'pt-[64px]'}`}>
-                <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 lg:p-12">
-                     <section className={`sticky ${isBannerVisible ? 'top-[218px]' : isHeaderAndFilterVisible ? 'top-[144px]' : 'top-[64px]'} z-30 mb-8 p-4 rounded-2xl flex flex-col gap-4 transition-transform duration-300 ${isHeaderAndFilterVisible ? 'translate-y-0' : '-translate-y-full'} ${isGlass ? 'bg-slate-900/75 backdrop-blur-md border border-slate-700' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[8px_8px_16px_#a3b1c6]' : 'bg-white border-2 border-black'}`}>
-                        <div className="flex flex-col md:flex-row items-center gap-4">
-                            <div ref={searchContainerRef} className="relative w-full md:flex-1">
-                                <input type="text" placeholder="키워드로 전체 검색 (대회, 강좌, 코드)" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onFocus={() => setShowSuggestions(true)} className={`w-full pl-4 pr-12 py-3 rounded-lg focus:outline-none ${isGlass ? 'bg-slate-900/70 border border-slate-600/50 text-slate-100' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[inset_5px_5px_10px_#a3b1c6]' : 'bg-white border-2 border-black'}`} autoComplete="off" />
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                                    {isFetchingSemanticKeywords && <div className={`animate-spin rounded-full h-5 w-5 border-b-2 ${isGlass ? 'border-sky-300' : 'border-blue-500'}`}></div>}
-                                    {inputValue && !isFetchingSemanticKeywords && <button onClick={() => setInputValue('')} className="p-1"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>}
-                                </div>
-                                {showSuggestions && (suggestions.recent?.length || suggestions.popular?.length || suggestions.filtered?.length) && (
-                                    <div className={`absolute top-full left-0 w-full mt-2 rounded-2xl z-50 p-2 max-h-60 overflow-y-auto ${isGlass ? 'bg-slate-800/95 border border-slate-600' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[8px_8px_16px_#a3b1c6]' : 'bg-white border-2 border-black shadow-[6px_6px_0_#000]'}`}>
-                                        {!inputValue ? (<>{suggestions.recent?.length > 0 && <div><h4 className="px-2 pt-1 pb-2 text-xs font-bold opacity-50">최근 검색어</h4>{suggestions.recent.map(s => <li key={s} onClick={() => { setInputValue(s); setShowSuggestions(false); }} className="p-2 text-sm rounded-lg cursor-pointer hover:bg-sky-500/10 list-none">{s}</li>)}</div>}{suggestions.popular?.length > 0 && <div className="mt-2"><h4 className="px-2 pt-1 pb-2 text-xs font-bold opacity-50">인기 키워드</h4>{suggestions.popular.map(s => <li key={s} onClick={() => { setInputValue(s); setShowSuggestions(false); }} className="p-2 text-sm rounded-lg cursor-pointer hover:bg-sky-500/10 list-none">{s}</li>)}</div>}</>) : (suggestions.filtered?.map(s => <li key={s} onClick={() => { setInputValue(s); setShowSuggestions(false); }} className="p-2 text-sm rounded-lg cursor-pointer hover:bg-sky-500/10 list-none">{s}</li>))}
+            
+            <div className="flex flex-1">
+                <Sidebar 
+                    theme={theme}
+                    viewMode={viewMode}
+                    showDataLinksOnly={showDataLinksOnly}
+                    daySchoolTypeFilter={daySchoolTypeFilter}
+                    onCompetitionClick={handleCompetitionNavClick}
+                    onDataLinksToggle={handleDataLinksToggle}
+                    onViewChange={handleViewChange}
+                    isHeaderVisible={isHeaderAndFilterVisible}
+                />
+
+                <main className={`flex-1 transition-all duration-300 ${isBannerVisible ? 'pt-[218px]' : isHeaderAndFilterVisible ? 'pt-[144px]' : 'pt-[64px]'} lg:ml-64`}>
+                    <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
+                         <section className={`sticky ${isBannerVisible ? 'top-[218px]' : isHeaderAndFilterVisible ? 'top-[144px]' : 'top-[64px]'} z-30 mb-8 p-4 rounded-2xl flex flex-col gap-4 transition-transform duration-300 ${isHeaderAndFilterVisible ? 'translate-y-0' : '-translate-y-full'} ${isGlass ? 'bg-slate-900/75 backdrop-blur-md border border-slate-700' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[8px_8px_16px_#a3b1c6]' : 'bg-white border-2 border-black'}`}>
+                            <div className="flex flex-col md:flex-row items-center gap-4">
+                                <div ref={searchContainerRef} className="relative w-full md:flex-1">
+                                    <input type="text" placeholder="키워드로 전체 검색 (대회, 강좌, 코드)" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onFocus={() => setShowSuggestions(true)} className={`w-full pl-4 pr-12 py-3 rounded-lg focus:outline-none ${isGlass ? 'bg-slate-900/70 border border-slate-600/50 text-slate-100' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[inset_5px_5px_10px_#a3b1c6]' : 'bg-white border-2 border-black'}`} autoComplete="off" />
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                        {isFetchingSemanticKeywords && <div className={`animate-spin rounded-full h-5 w-5 border-b-2 ${isGlass ? 'border-sky-300' : 'border-blue-500'}`}></div>}
+                                        {inputValue && !isFetchingSemanticKeywords && <button onClick={() => setInputValue('')} className="p-1"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>}
                                     </div>
-                                )}
+                                    {showSuggestions && (suggestions.recent?.length || suggestions.popular?.length || suggestions.filtered?.length) && (
+                                        <div className={`absolute top-full left-0 w-full mt-2 rounded-2xl z-50 p-2 max-h-60 overflow-y-auto ${isGlass ? 'bg-slate-800/95 border border-slate-600' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[8px_8px_16px_#a3b1c6]' : 'bg-white border-2 border-black shadow-[6px_6px_0_#000]'}`}>
+                                            {!inputValue ? (<>{suggestions.recent?.length > 0 && <div><h4 className="px-2 pt-1 pb-2 text-xs font-bold opacity-50">최근 검색어</h4>{suggestions.recent.map(s => <li key={s} onClick={() => { setInputValue(s); setShowSuggestions(false); }} className="p-2 text-sm rounded-lg cursor-pointer hover:bg-sky-500/10 list-none">{s}</li>)}</div>}{suggestions.popular?.length > 0 && <div className="mt-2"><h4 className="px-2 pt-1 pb-2 text-xs font-bold opacity-50">인기 키워드</h4>{suggestions.popular.map(s => <li key={s} onClick={() => { setInputValue(s); setShowSuggestions(false); }} className="p-2 text-sm rounded-lg cursor-pointer hover:bg-sky-500/10 list-none">{s}</li>)}</div>}</>) : (suggestions.filtered?.map(s => <li key={s} onClick={() => { setInputValue(s); setShowSuggestions(false); }} className="p-2 text-sm rounded-lg cursor-pointer hover:bg-sky-500/10 list-none">{s}</li>))}
+                                        </div>
+                                    )}
+                                </div>
+                                {viewMode === 'list' && <div className="relative hidden md:block"><select value={sortCriteria} onChange={(e) => handleSortClick(e.target.value as SortCriteria)} className={`appearance-none pl-4 pr-10 py-3 rounded-lg focus:outline-none cursor-pointer ${isGlass ? 'bg-slate-900/70 border border-slate-600/50 text-slate-100' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[inset_5px_5px_10px_#a3b1c6]' : 'bg-white border-2 border-black'}`}><option value="startDateDesc">최신순</option><option value="endDateAsc">마감 임박순</option><option value="participantsDesc">참가자 많은 순</option><option value="prizeDesc">상금순</option></select></div>}
                             </div>
-                            {viewMode === 'list' && <div className="relative hidden md:block"><select value={sortCriteria} onChange={(e) => handleSortClick(e.target.value as SortCriteria)} className={`appearance-none pl-4 pr-10 py-3 rounded-lg focus:outline-none cursor-pointer ${isGlass ? 'bg-slate-900/70 border border-slate-600/50 text-slate-100' : isNeumorphic ? 'bg-[#e0e5ec] shadow-[inset_5px_5px_10px_#a3b1c6]' : 'bg-white border-2 border-black'}`}><option value="startDateDesc">최신순</option><option value="endDateAsc">마감 임박순</option><option value="participantsDesc">참가자 많은 순</option><option value="prizeDesc">상금순</option></select></div>}
-                        </div>
-                        <div className={`relative pt-4 border-t ${isGlass ? 'border-slate-700/50' : isNeumorphic ? 'border-gray-300/50' : 'border-black'}`}>
-                             <div className="flex items-center justify-between gap-x-4">
-                                <div className="flex-1 overflow-x-auto custom-scrollbar">
-                                    <div className="inline-flex items-center gap-x-4 md:gap-x-6 pb-2">
-                                        <div className="inline-flex items-center gap-2"><button onClick={handleCompetitionNavClick} className={getNavButtonClasses('대회')}>대회</button><button onClick={handleDataLinksToggle} className={`${getNavButtonClasses('데이터')} hidden md:flex`}>데이터</button><button onClick={() => handleViewChange('basecode')} className={`${getNavButtonClasses('코드')} hidden md:flex`}>코드</button><button onClick={() => handleViewChange('competition_roadmap')} className={getNavButtonClasses('참가 방법')}>참가 방법</button></div>
-                                        <div className={`h-5 w-px ${isGlass ? 'bg-slate-700' : 'bg-gray-300'} md:hidden`}></div>
-                                        <div className="inline-flex items-center gap-2"><button onClick={() => handleViewChange('dayschool', 'all')} className={getNavButtonClasses('학습')}>학습</button><button onClick={() => handleViewChange('dayschool', 'course')} className={`${getNavButtonClasses('강좌')} hidden md:flex`}>강좌</button><button onClick={() => handleViewChange('dayschool', 'hackathon')} className={`${getNavButtonClasses('해커톤')} hidden md:flex`}>해커톤</button><button onClick={() => handleViewChange('dayschool', 'lecture')} className={`${getNavButtonClasses('랭커특강')} hidden md:flex`}>랭커특강</button><button onClick={() => handleViewChange('roadmap')} className={getNavButtonClasses('로드맵')}>로드맵</button></div>
+                            
+                            {(viewMode === 'list' || viewMode === 'dayschool' || viewMode === 'basecode') && (
+                                <div className={`flex items-center justify-between pt-4 border-t ${isGlass ? 'border-slate-700/50' : isNeumorphic ? 'border-gray-300/50' : 'border-black'}`}>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => setIsDetailFilterVisible(!isDetailFilterVisible)} className={getFilterButtonClasses(isDetailFilterVisible)}>
+                                            <span className="text-sm">🔍 상세 필터</span>
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={handleReset} className={getFilterButtonClasses(false)}>초기화</button>
+                                        <button onClick={handleToggleManual} className={getFilterButtonClasses(isManualVisible)}>매뉴얼</button>
                                     </div>
                                 </div>
-                                {viewMode === 'list' && <div className="ml-2 hidden md:block"><button onClick={() => setIsDetailFilterVisible(!isDetailFilterVisible)} className={getFilterButtonClasses(isDetailFilterVisible)}>상세필터</button></div>}
-                            </div>
-                        </div>
-                        {viewMode === 'list' && isDetailFilterVisible && (
-                            <div className="hidden md:block pt-4 border-t border-gray-300/50">
-                                <div className="flex flex-wrap items-center justify-between gap-4">
-                                    <div className="flex flex-wrap items-center gap-6">
-                                        <div className="flex items-center gap-2"><span className="text-sm font-semibold opacity-70">상태:</span>{(['all', 'ongoing', 'ended', 'practice'] as StatusFilter[]).map(s => <button key={s} onClick={() => handleStatusClick(s)} className={getFilterButtonClasses(statusFilter === s)}>{ {all: '전체', ongoing: '진행중', ended: '종료', practice: '연습'}[s] }</button>)}</div>
-                                        <div className="flex items-center gap-2"><span className="text-sm font-semibold opacity-70">유형:</span>{(['all', 'algorithm', 'prompt', 'service', 'idea'] as CompetitionTypeFilter[]).map(t => <button key={t} onClick={() => handleTypeClick(t)} className={getFilterButtonClasses(typeFilter === t)}>{ {all: '전체', algorithm: '알고리즘', prompt: '프롬프트', service: '개발', idea: '아이디어'}[t] }</button>)}</div>
-                                    </div>
-                                    <div className="flex items-center gap-2"><button onClick={handleReset} className={getFilterButtonClasses(false)}>초기화</button><button onClick={handleToggleManual} className={getFilterButtonClasses(isManualVisible)}>매뉴얼</button></div>
+                            )}
+
+                            {isDetailFilterVisible && viewMode === 'list' && (
+                                <div className="pt-4 border-t border-gray-300/50 flex flex-wrap items-center gap-6">
+                                    <div className="flex items-center gap-2"><span className="text-sm font-semibold opacity-70">상태:</span>{(['all', 'ongoing', 'ended', 'practice'] as StatusFilter[]).map(s => <button key={s} onClick={() => handleStatusClick(s)} className={getFilterButtonClasses(statusFilter === s)}>{ {all: '전체', ongoing: '진행중', ended: '종료', practice: '연습'}[s] }</button>)}</div>
+                                    <div className="flex items-center gap-2"><span className="text-sm font-semibold opacity-70">유형:</span>{(['all', 'algorithm', 'prompt', 'service', 'idea'] as CompetitionTypeFilter[]).map(t => <button key={t} onClick={() => handleTypeClick(t)} className={getFilterButtonClasses(typeFilter === t)}>{ {all: '전체', algorithm: '알고리즘', prompt: '프롬프트', service: '개발', idea: '아이디어'}[t] }</button>)}</div>
                                 </div>
-                            </div>
-                        )}
-                    </section>
-                    {isManualVisible && <ManualModal isOpen={isManualVisible} onClose={handleToggleManual} theme={theme} />}
-                    {isLoading && !allCompetitions.length && <LoadingSpinner theme={theme} />}
-                    {error && <ErrorMessage message={error} theme={theme} />}
-                    {!error && (
-                         <section className={isFetchingSemanticKeywords ? 'ai-searching' : ''}>
-                            {viewMode === 'list' && <CompetitionListView filteredCompetitions={filteredCompetitions} paginatedCompetitions={paginatedCompetitions} currentPage={currentPage} paginationTotalItems={paginationTotalItems} hasActiveFilters={!!keywordFilter.trim() || statusFilter !== 'all' || typeFilter !== 'all' || showDataLinksOnly} theme={theme} showDataLinksOnly={showDataLinksOnly} isLoading={isLoading} aiTip={aiTip} isFetchingAiTip={isFetchingAiTip} aiTipError={aiTipError} onStatusClick={handleStatusClick} onKeywordClick={handleKeywordClick} onSortClick={handleSortClick} onPageChange={setCurrentPage} onResetFilters={handleReset} />}
-                            {viewMode === 'dayschool' && <DaySchoolContentView filteredDaySchoolCourses={filteredDaySchoolCourses} paginatedDaySchoolCourses={paginatedDaySchoolCourses} theme={theme} popularDaySchoolKeywords={popularDaySchoolKeywords} daySchoolKeywordFilter={daySchoolKeywordFilter} handleDaySchoolKeywordClick={handleDaySchoolKeywordClick} daySchoolDifficultyFilter={daySchoolDifficultyFilter} handleDaySchoolDifficultyClick={handleDaySchoolDifficultyClick} currentPage={currentPage} daySchoolSortCriteria={daySchoolSortCriteria} daySchoolSortDirection={daySchoolSortDirection} handleDaySchoolSortChange={handleDaySchoolSortChange} daySchoolTypeFilter={daySchoolTypeFilter} handleDaySchoolTypeChange={handleDaySchoolTypeChange} paginationTotalItems={paginationTotalItems} onPageChange={setCurrentPage} isLoading={isLoading} onResetFilters={handleReset} aiTip={aiTip} isFetchingAiTip={isFetchingAiTip} aiTipError={aiTipError} />}
-                            {viewMode === 'basecode' && <BaseCodeContentView filteredBaseCode={filteredBaseCode} paginatedBaseCode={paginatedBaseCode} theme={theme} baseCodeCategoryFilter={baseCodeCategoryFilter} handleBaseCodeCategoryChange={handleBaseCodeCategoryChange} currentPage={currentPage} paginationTotalItems={paginationTotalItems} onPageChange={setCurrentPage} isLoading={isLoading} onResetFilters={handleReset} aiTip={aiTip} isFetchingAiTip={isFetchingAiTip} aiTipError={aiTipError} />}
-                            {viewMode === 'roadmap' && <RoadmapView theme={theme} />}
-                            {viewMode === 'competition_roadmap' && <CompetitionRoadmapView theme={theme} />}
+                            )}
                         </section>
-                    )}
-                </div>
-            </main>
-            <Footer theme={theme} />
-        </>
+                        
+                        {isManualVisible && <ManualModal isOpen={isManualVisible} onClose={handleToggleManual} theme={theme} />}
+                        {isLoading && !allCompetitions.length && <LoadingSpinner theme={theme} />}
+                        {error && <ErrorMessage message={error} theme={theme} />}
+                        {!error && (
+                             <section className={isFetchingSemanticKeywords ? 'ai-searching' : ''}>
+                                {viewMode === 'list' && <CompetitionListView filteredCompetitions={filteredCompetitions} paginatedCompetitions={paginatedCompetitions} currentPage={currentPage} paginationTotalItems={paginationTotalItems} hasActiveFilters={!!keywordFilter.trim() || statusFilter !== 'all' || typeFilter !== 'all' || showDataLinksOnly} theme={theme} showDataLinksOnly={showDataLinksOnly} isLoading={isLoading} aiTip={aiTip} isFetchingAiTip={isFetchingAiTip} aiTipError={aiTipError} onStatusClick={handleStatusClick} onKeywordClick={handleKeywordClick} onSortClick={handleSortClick} onPageChange={setCurrentPage} onResetFilters={handleReset} />}
+                                {viewMode === 'dayschool' && <DaySchoolContentView filteredDaySchoolCourses={filteredDaySchoolCourses} paginatedDaySchoolCourses={paginatedDaySchoolCourses} theme={theme} popularDaySchoolKeywords={popularDaySchoolKeywords} daySchoolKeywordFilter={daySchoolKeywordFilter} handleDaySchoolKeywordClick={handleDaySchoolKeywordClick} daySchoolDifficultyFilter={daySchoolDifficultyFilter} handleDaySchoolDifficultyClick={handleDaySchoolDifficultyClick} currentPage={currentPage} daySchoolSortCriteria={daySchoolSortCriteria} daySchoolSortDirection={daySchoolSortDirection} handleDaySchoolSortChange={handleDaySchoolSortChange} daySchoolTypeFilter={daySchoolTypeFilter} handleDaySchoolTypeChange={handleDaySchoolTypeChange} paginationTotalItems={paginationTotalItems} onPageChange={setCurrentPage} isLoading={isLoading} onResetFilters={handleReset} aiTip={aiTip} isFetchingAiTip={isFetchingAiTip} aiTipError={aiTipError} />}
+                                {viewMode === 'basecode' && <BaseCodeContentView filteredBaseCode={filteredBaseCode} paginatedBaseCode={paginatedBaseCode} theme={theme} baseCodeCategoryFilter={baseCodeCategoryFilter} handleBaseCodeCategoryChange={handleBaseCodeCategoryChange} currentPage={currentPage} paginationTotalItems={paginationTotalItems} onPageChange={setCurrentPage} isLoading={isLoading} onResetFilters={handleReset} aiTip={aiTip} isFetchingAiTip={isFetchingAiTip} aiTipError={aiTipError} />}
+                                {viewMode === 'roadmap' && <RoadmapView theme={theme} />}
+                                {viewMode === 'competition_roadmap' && <CompetitionRoadmapView theme={theme} />}
+                            </section>
+                        )}
+                    </div>
+                    <Footer theme={theme} />
+                </main>
+            </div>
+        </div>
     );
 };
 
