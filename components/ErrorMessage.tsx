@@ -1,5 +1,7 @@
+
 import React from 'react';
-import type { Theme } from '../types';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface ErrorMessageProps {
     message: string;
@@ -7,8 +9,8 @@ interface ErrorMessageProps {
 }
 
 const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, theme }) => {
-    const isGlass = theme === 'dark';
-    const isNeumorphic = theme === 'light';
+    const isGlass = theme === 'glass';
+    const isNeumorphic = theme === 'neumorphic';
 
     const containerClasses = isGlass 
         ? "text-center bg-red-900/40 backdrop-blur-md text-red-200 p-4 rounded-2xl relative mt-8 border border-red-500/30 shadow-2xl"

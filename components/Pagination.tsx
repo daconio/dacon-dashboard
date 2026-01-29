@@ -1,5 +1,6 @@
 import React from 'react';
-import type { Theme } from '../types';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface PaginationProps {
     currentPage: number;
@@ -24,8 +25,8 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalItems, itemsP
         }
     };
 
-    const isGlass = theme === 'dark';
-    const isNeumorphic = theme === 'light';
+    const isGlass = theme === 'glass';
+    const isNeumorphic = theme === 'neumorphic';
 
     const getButtonClasses = (isCurrent: boolean) => {
         if (isGlass) {

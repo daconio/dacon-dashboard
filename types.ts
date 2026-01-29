@@ -1,4 +1,3 @@
-
 export interface Competition {
   cpt_id: number;
   name: string;
@@ -42,5 +41,4 @@ export interface BaseCodeItem {
   keywords: string[];
 }
 
-export type ViewMode = 'list' | 'calendar' | 'dacon_hub';
-export type Theme = 'light' | 'dark' | 'brutal';
+export type ViewMode = 'list' | 'basecode' | 'dayschool' | 'roadmap' | 'competition_roadmap';

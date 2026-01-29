@@ -1,5 +1,6 @@
 import React from 'react';
-import type { Theme } from '../types';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface TickerProps {
     items: string[];
@@ -7,8 +8,8 @@ interface TickerProps {
 }
 
 const Ticker: React.FC<TickerProps> = ({ items, theme }) => {
-    const isGlass = theme === 'dark';
-    const isNeumorphic = theme === 'light';
+    const isGlass = theme === 'glass';
+    const isNeumorphic = theme === 'neumorphic';
 
     const containerClasses = isGlass
         ? "overflow-hidden p-3 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-700 shadow-lg"

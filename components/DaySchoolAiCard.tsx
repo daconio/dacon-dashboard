@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Theme } from '../types';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface RecommendationData {
     title: string;
@@ -64,8 +66,8 @@ const DaySchoolAiCard: React.FC<DaySchoolAiCardProps> = ({ theme }) => {
         getRandomRecommendation();
     };
 
-    const isGlass = theme === 'dark';
-    const isNeumorphic = theme === 'light';
+    const isGlass = theme === 'glass';
+    const isNeumorphic = theme === 'neumorphic';
     
     const containerClasses = `dayschool-ai-card p-6 rounded-2xl flex flex-col relative animate-fadeInUp`;
 

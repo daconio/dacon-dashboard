@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import type { DaySchoolCourse } from '../types';
-import type { Theme } from '../types';
 import DaySchoolCard from './DaySchoolCard';
 import DaySchoolAiCard from './DaySchoolAiCard';
 
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 type DifficultyLevel = '초급' | '중급' | '고급';
 type DaySchoolSortCriteria = 'status' | 'titleAsc' | 'idDesc' | 'difficulty' | 'duration_in_minutes' | 'participant_count';
 type DaySchoolType = 'all' | 'course' | 'hackathon' | 'lecture';
@@ -39,8 +39,8 @@ const DaySchoolView: React.FC<DaySchoolViewProps> = ({
     selectedType,
     onTypeChange
 }) => {
-    const isGlass = theme === 'dark';
-    const isNeumorphic = theme === 'light';
+    const isGlass = theme === 'glass';
+    const isNeumorphic = theme === 'neumorphic';
     
     const displayedKeywords = useMemo(() => {
         return keywords.slice(0, 8);

@@ -1,14 +1,16 @@
+
 import React from 'react';
-import type { Theme } from '../types';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface LoadingSpinnerProps {
     theme: Theme;
 }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ theme }) => {
-    const isGlass = theme === 'dark';
+    const isGlass = theme === 'glass';
     const spinnerColor = isGlass ? 'border-sky-400' : 'border-blue-500';
-    const textColor = isGlass ? 'text-slate-400' : theme === 'light' ? 'text-gray-500' : 'text-black';
+    const textColor = isGlass ? 'text-slate-400' : theme === 'neumorphic' ? 'text-gray-500' : 'text-black';
 
     return (
         <div className="flex flex-col items-center justify-center py-10">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { BaseCodeItem } from '../types';
-import type { Theme } from '../types';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface BaseCodeCardProps {
     item: BaseCodeItem;
@@ -32,7 +33,7 @@ const BaseCodeCard: React.FC<BaseCodeCardProps> = ({ item, theme, animationIndex
         return () => clearTimeout(timer);
     }, [animationIndex]);
 
-    const isGlass = theme === 'dark';
+    const isGlass = theme === 'glass';
 
     return (
         <a href={item.url} target="_blank" rel="noopener noreferrer" className="h-full block">
@@ -48,7 +49,7 @@ const BaseCodeCard: React.FC<BaseCodeCardProps> = ({ item, theme, animationIndex
                             {item.keywords.map(kw => (
                                 <span key={kw} className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
                                     isGlass ? 'bg-slate-700/50 text-slate-300' 
-                                    : theme === 'light' ? 'bg-gray-200 text-gray-700' 
+                                    : theme === 'neumorphic' ? 'bg-gray-200 text-gray-700' 
                                     : 'bg-gray-100 text-gray-800'
                                 }`}>
                                     #{kw}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import type { Theme } from '../types';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface UpcomingCompetitionCardProps {
     animationIndex: number;
@@ -22,8 +23,8 @@ const UpcomingCompetitionCard: React.FC<UpcomingCompetitionCardProps> = ({ anima
         return () => clearTimeout(timer);
     }, [animationIndex]);
 
-    const isGlass = theme === 'dark';
-    const isNeumorphic = theme === 'light';
+    const isGlass = theme === 'glass';
+    const isNeumorphic = theme === 'neumorphic';
 
     const baseClasses = isGlass
         ? `bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 rounded-2xl shadow-2xl shadow-teal-500/20 transition-all duration-300 flex flex-col h-full p-6 items-center justify-center text-center relative border border-cyan-400/30`

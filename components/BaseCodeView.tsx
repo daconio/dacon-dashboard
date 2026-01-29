@@ -1,7 +1,8 @@
 import React from 'react';
 import type { BaseCodeItem, BaseCodeCategory } from '../types';
-import type { Theme } from '../types';
 import BaseCodeCard from './BaseCodeCard';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface BaseCodeViewProps {
     items: BaseCodeItem[];
@@ -11,8 +12,8 @@ interface BaseCodeViewProps {
 }
 
 const BaseCodeView: React.FC<BaseCodeViewProps> = ({ items, theme, selectedCategory, onCategoryChange }) => {
-    const isGlass = theme === 'dark';
-    const isNeumorphic = theme === 'light';
+    const isGlass = theme === 'glass';
+    const isNeumorphic = theme === 'neumorphic';
     
     const categories: (BaseCodeCategory | 'all')[] = ['all', '생성AI', 'NLP', '정형', '비전', '데이터분석', '전처리'];
 

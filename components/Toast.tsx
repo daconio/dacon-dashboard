@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import type { Theme } from '../types';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface ToastProps {
     id: number;
@@ -28,8 +29,8 @@ const Toast: React.FC<ToastProps> = ({ id, message, onClose, theme }) => {
         setTimeout(() => onClose(id), 500);
     };
 
-    const isGlass = theme === 'dark';
-    const isNeumorphic = theme === 'light';
+    const isGlass = theme === 'glass';
+    const isNeumorphic = theme === 'neumorphic';
 
     const containerClasses = isGlass
         ? "flex items-center justify-between w-full max-w-xs p-4 text-slate-200 bg-slate-800/80 backdrop-blur-lg rounded-2xl border border-slate-600 shadow-2xl"

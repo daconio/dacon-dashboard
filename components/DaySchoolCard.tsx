@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { DaySchoolCourse } from '../types';
-import type { Theme } from '../types';
 
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 type DaySchoolSortCriteria = 'status' | 'titleAsc' | 'idDesc' | 'difficulty' | 'duration_in_minutes' | 'participant_count';
 
 interface DaySchoolCardProps {
@@ -33,13 +33,13 @@ const DaySchoolCard: React.FC<DaySchoolCardProps> = ({ course, theme, animationI
 
     const isInteractive = !!onSortChange;
 
-    const cardClasses = theme === 'dark'
+    const cardClasses = theme === 'glass'
       ? `bg-slate-800/40 backdrop-blur-lg rounded-2xl border border-slate-500/20 shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer hover:border-slate-400/50 hover:-translate-y-1`
-      : theme === 'light'
+      : theme === 'neumorphic'
       ? `bg-[#e0e5ec] rounded-2xl shadow-[8px_8px_16px_#a3b1c6,-8px_-8px_16px_#ffffff] transition-all duration-300 flex flex-col h-full cursor-pointer hover:shadow-[15px_15px_30px_#a3b1c6,-15px_-15px_30px_#ffffff] hover:-translate-y-1`
       : 'bg-white rounded-lg border-2 border-black transition-all duration-200 flex flex-col h-full cursor-pointer';
     
-    const titleColor = theme === 'dark' ? 'text-slate-100' : theme === 'light' ? 'text-slate-800' : 'text-black';
+    const titleColor = theme === 'glass' ? 'text-slate-100' : theme === 'neumorphic' ? 'text-slate-800' : 'text-black';
 
     const handleCardClick = () => {
         window.open(link, '_blank', 'noopener,noreferrer');
@@ -68,10 +68,10 @@ const DaySchoolCard: React.FC<DaySchoolCardProps> = ({ course, theme, animationI
             return `${base} dayschool-badge-sortable ${isActive ? 'sort-active' : ''}`;
         }
 
-        if (theme === 'dark') {
+        if (theme === 'glass') {
             return `${base} bg-slate-700/50 text-slate-300 border border-slate-600/50`;
         }
-        if (theme === 'light') {
+        if (theme === 'neumorphic') {
             return `${base} bg-[#e0e5ec] text-gray-700 shadow-[3px_3px_6px_#a3b1c6,-3px_-3px_6px_#ffffff]`;
         }
         // Webtoon
@@ -115,8 +115,8 @@ const DaySchoolCard: React.FC<DaySchoolCardProps> = ({ course, theme, animationI
                             <div className="flex flex-wrap gap-1.5 mb-2">
                                 {tags.slice(0, 2).map(tag => (
                                      <span key={tag.tag_title} className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
-                                        theme === 'dark' ? 'bg-slate-700/50 text-slate-300' 
-                                        : theme === 'light' ? 'bg-gray-200 text-gray-700' 
+                                        theme === 'glass' ? 'bg-slate-700/50 text-slate-300' 
+                                        : theme === 'neumorphic' ? 'bg-gray-200 text-gray-700' 
                                         : 'bg-gray-100 text-gray-800'
                                     }`}>
                                         #{tag.tag_title}
@@ -127,7 +127,7 @@ const DaySchoolCard: React.FC<DaySchoolCardProps> = ({ course, theme, animationI
                          <div className="flex justify-between items-start gap-2 mb-3">
                             <h3 className={`text-base font-bold leading-snug ${titleColor} flex-grow line-clamp-2`}>{title}</h3>
                             {status === 'NEW' && (
-                                <span className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${theme === 'dark' ? 'bg-yellow-400/20 text-yellow-300 backdrop-blur-sm border border-yellow-300/30' : theme === 'light' ? 'bg-yellow-200 text-yellow-800' : 'bg-yellow-300 text-black border border-black'}`}>
+                                <span className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${theme === 'glass' ? 'bg-yellow-400/20 text-yellow-300 backdrop-blur-sm border border-yellow-300/30' : theme === 'neumorphic' ? 'bg-yellow-200 text-yellow-800' : 'bg-yellow-300 text-black border border-black'}`}>
                                     NEW
                                 </span>
                             )}

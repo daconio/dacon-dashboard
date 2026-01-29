@@ -1,98 +1,728 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="https://r2-images.dacon.co.kr/external/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DAKER | 해커톤 대시보드</title>
+    <title>데이콘 AI 경진대회 대시보드 | 전체 목록</title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="데이콘(Dacon)의 모든 AI 및 데이터 사이언스 경진대회를 한 곳에서 검색하고 필터링하세요." />
+    <meta name="description" content="데이콘(Dacon)에서 진행되는 모든 AI 및 데이터 분석 경진대회 목록을 한눈에 확인하세요. 키워드 검색, 상태 필터, 기간 설정으로 원하는 대회를 쉽고 빠르게 찾을 수 있습니다." />
+    <meta name="keywords" content="데이콘, dacon, AI 경진대회, 데이터 분석, 데이터 사이언스, 머신러닝, 딥러닝, 인공지능, 빅데이터, AI 대회" />
+    <link rel="canonical" href="https://competition-dashboard.dacon.io/" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="데이콘 대회 및 교육 검색 대시보드" />
+    <meta property="og:description" content="데이콘 대회와 교육을 다양한 테마로 즐겨보세요" />
+    <meta property="og:image" content="https://dacon-images.s3.ap-northeast-2.amazonaws.com/dacon20220919.png" />
+    <meta property="og:url" content="https://competition-dashboard.dacon.io/" />
+    <meta property="og:type" content="website" />
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <style>
+        @keyframes gradient-animation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         body {
-            font-family: 'Pretendard', sans-serif;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+            transition: background-color 0.5s ease, color 0.5s ease;
             overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* --- Themes --- */
+        .theme-glass {
+            background-color: #020617;
+            color: #cbd5e1; /* slate-300 for better base visibility */
+        }
+        .theme-neumorphic {
+            background-color: #e0e5ec;
+            color: #374151;
+        }
+        .theme-webtoon {
+            background-color: #f8f9fa;
+            color: #212529;
         }
 
-        /* --- Theme Variables --- */
-        :root {
-            --bg-primary: #f8f9fa;
-            --bg-secondary: #ffffff;
-            --bg-tertiary: #f1f3f5;
-            --text-primary: #212529;
-            --text-secondary: #868e96;
-            --border-color: #e9ecef;
-            --accent-color: #3b82f6;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --brutal-border: 0px;
-            --brutal-shadow: none;
+        /* --- Glass Theme Effects --- */
+        .theme-glass::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, #020617, #1e293b, #475569, #1e293b, #020617);
+            background-size: 400% 400%;
+            animation: gradient-animation 25s ease infinite;
+            z-index: -2;
+        }
+        @keyframes morph {
+            0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translate(-10%, -10%) rotate(0deg) scale(1); }
+            25% { transform: translate(10%, -10%) rotate(45deg) scale(1.1); }
+            50% { border-radius: 40% 60% 70% 30% / 40% 70% 30% 60%; transform: translate(10%, 10%) rotate(90deg) scale(1.2); }
+            75% { transform: translate(-10%, 10%) rotate(135deg) scale(1.1); }
+        }
+        .theme-glass::after {
+            content: '';
+            position: fixed;
+            width: 80vmax;
+            height: 80vmax;
+            top: -20vmax;
+            right: -20vmax;
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.4) 0%, rgba(79, 70, 229, 0) 60%);
+            animation: morph 20s ease-in-out infinite alternate;
+            z-index: -1;
+            filter: blur(80px);
+        }
+        
+        /* --- Text Shadows --- */
+        .text-shadow-elegant {
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+        .text-shadow-soft {
+             text-shadow: 1px 1px 2px #a3b1c6, -1px -1px 2px #ffffff;
+        }
+        .text-shadow-webtoon {
+            text-shadow: 1px 1px 0px #e9ecef;
         }
 
-        /* Light Theme (Default) */
-        .theme-light {
-            --bg-primary: #f3f4f6; /* Gray-100 */
-            --bg-secondary: #ffffff;
-            --bg-tertiary: #ffffff;
-            --text-primary: #111827;
-            --text-secondary: #6b7280;
-            --border-color: #e5e7eb;
-            --accent-color: #3b82f6;
-            --card-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
         }
 
-        /* Dark Theme */
-        .theme-dark {
-            --bg-primary: #111827; /* Gray-900 */
-            --bg-secondary: #1f2937; /* Gray-800 */
-            --bg-tertiary: #374151; /* Gray-700 */
-            --text-primary: #f9fafb;
-            --text-secondary: #9ca3af;
-            --border-color: #374151;
-            --accent-color: #60a5fa;
-            --card-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        /* --- Animations --- */
+        @keyframes ticker {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-ticker { animation: ticker 40s linear infinite; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(1rem); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeInUp { animation: fadeInUp 0.5s ease-out forwards; }
+
+        @keyframes text-glow {
+            0%, 100% { text-shadow: 0 0 8px rgba(56, 189, 248, 0.6), 0 0 16px rgba(129, 140, 248, 0.4); }
+            50% { text-shadow: 0 0 16px rgba(56, 189, 248, 0.9), 0 0 24px rgba(129, 140, 248, 0.6); }
+        }
+        .animate-text-glow { animation: text-glow 2.8s ease-in-out infinite; }
+
+        @keyframes text-glow-glass {
+            0%, 100% { text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 20px rgba(129, 140, 248, 0.6); }
+            50% { text-shadow: 0 0 20px rgba(56, 189, 248, 1), 0 0 32px rgba(129, 140, 248, 0.8); }
+        }
+        .theme-glass .animate-text-glow {
+            animation-name: text-glow-glass;
+        }
+        
+        @keyframes pulse-subtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .animate-pulse-subtle { animation: pulse-subtle 3s ease-in-out infinite; }
+
+        @keyframes join-glow {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 5px rgba(37, 99, 235, 0.6), 0 0 10px rgba(14, 165, 233, 0.5); }
+            50% { transform: scale(1.05); box-shadow: 0 0 10px rgba(37, 99, 235, 0.9), 0 0 20px rgba(14, 165, 233, 0.7); }
+        }
+        .animate-join-glow { animation: join-glow 2s ease-in-out infinite; }
+        
+        @keyframes slide-in-toast {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slide-in-toast { animation: slide-in-toast 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+
+        @keyframes fade-out-toast {
+            from { opacity: 1; }
+            to { opacity: 0; transform: scale(0.9); }
+        }
+        .animate-fade-out-toast { animation: fade-out-toast 0.5s ease-out forwards; }
+
+        @keyframes search-animation {
+            0% { transform: translate(-20px, -15px) rotate(-15deg); }
+            100% { transform: translate(20px, 15px) rotate(15deg); }
+        }
+        .animate-search { animation: search-animation 3s ease-in-out infinite alternate; }
+        
+        @keyframes slideInFromLeftWithBounce {
+            0% { transform: translateX(-150%); opacity: 0; }
+            60% { transform: translateX(8%); opacity: 1; }
+            80% { transform: translateX(-3%); }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slide-in-left-bounce { animation: slideInFromLeftWithBounce 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+        @keyframes slideInFromRightWithBounce {
+            0% { transform: translateX(150%); opacity: 0; }
+            60% { transform: translateX(-8%); opacity: 1; }
+            80% { transform: translateX(3%); }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slide-in-right-bounce { animation: slideInFromRightWithBounce 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+        @keyframes slide-up {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+        .animate-slide-up {
+            animation: slide-up 0.3s ease-out forwards;
         }
 
-        /* Brutal Theme (Neo-Brutalism) */
-        .theme-brutal {
-            --bg-primary: #f0f0f0;
-            --bg-secondary: #ffffff;
-            --bg-tertiary: #ffffff;
-            --text-primary: #000000;
-            --text-secondary: #000000;
-            --border-color: #000000;
-            --accent-color: #3b82f6;
-            --card-shadow: 4px 4px 0px #000000;
-            --brutal-border: 2px solid #000000;
+        .ai-searching {
+            opacity: 0.5;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
         }
 
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
+        /* --- Webtoon Theme Overrides for DaySchool --- */
+        body.theme-webtoon.dayschool-active {
+            background-color: #f1f3f5; /* Slightly darker off-white */
+        }
+        .theme-webtoon.dayschool-active .dayschool-card {
+            box-shadow: 4px 4px 0px #adb5bd;
+        }
+        .theme-webtoon.dayschool-active .dayschool-card:hover {
+            box-shadow: 6px 6px 0px #495057;
+        }
+        .theme-webtoon.dayschool-active .dayschool-card-header {
+            border-bottom: 2px solid #000;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fff;
+            padding: 4px 12px;
+        }
+        /* NEW Type-based colors */
+        .theme-webtoon.dayschool-active .dayschool-card-header-course { background-color: #3b82f6; } /* Blue-500 */
+        .theme-webtoon.dayschool-active .dayschool-card-header-hackathon { background-color: #f97316; } /* Orange-500 */
+        .theme-webtoon.dayschool-active .dayschool-card-header-lecture { background-color: #9333ea; } /* Purple-600 */
+
+        /* Webtoon DaySchool AI Card */
+        .theme-webtoon.dayschool-active .dayschool-ai-card {
+            background-color: #fff3cd; /* Light Yellow */
+            border: 2px solid #000;
+            box-shadow: 4px 4px 0px #f7c54c; /* Darker Yellow Shadow */
+        }
+        .theme-webtoon.dayschool-active .dayschool-ai-card-title { color: #856404; }
+        .theme-webtoon.dayschool-active .dayschool-ai-rec-item { background-color: rgba(255, 255, 255, 0.6); border: 1px solid #ffeeba; }
+        .theme-webtoon.dayschool-active .dayschool-ai-rec-title { color: #212529; }
+        .theme-webtoon.dayschool-active .dayschool-ai-rec-reason { color: #495057; }
+        .theme-webtoon.dayschool-active .dayschool-ai-tip-separator { border-color: #f7c54c; border-style: dashed; }
+        .theme-webtoon.dayschool-active .dayschool-ai-tip-text { color: #856404; }
+
+        /* --- DaySchool Codecademy Theme Override (Shared) --- */
+        body.theme-neumorphic.dayschool-active {
+            background-color: #fdfaf6; /* Light warm cream */
+            color: #3a4150;
         }
 
-        /* Utilities */
+        /* DaySchoolCard Override (Neumorphic) */
+        .theme-neumorphic.dayschool-active .dayschool-card {
+            background-color: #ffffff;
+            border: 1px solid #e0e5ec;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+            padding: 0 !important;
+        }
+        .theme-neumorphic.dayschool-active .dayschool-card:hover {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+            border-color: #c0c8d4;
+            transform: translateY(-2px);
+        }
+        
+        /* DaySchoolCard Override (Glass) */
+        .theme-glass.dayschool-active .dayschool-card {
+            background-color: #1f2937; /* A solid, dark gray-blue */
+            border: 1px solid #374151;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            padding: 0 !important;
+        }
+        .theme-glass.dayschool-active .dayschool-card:hover {
+            border-color: #4b5563;
+            transform: translateY(-2px);
+        }
+
+        /* Common DaySchool Card Header */
+        .dayschool-card-header {
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .theme-neumorphic.dayschool-active .dayschool-card-header { color: #4a5568; border-bottom: 1px solid #e0e5ec; }
+        .theme-glass.dayschool-active .dayschool-card-header { color: #d1d5db; border-bottom: 1px solid #374151; }
+        
+        /* Header Colors (Neumorphic) - NEW Type-based colors */
+        .theme-neumorphic.dayschool-active .dayschool-card-header-course { background-color: #dbeafe; } /* Blue-100 */
+        .theme-neumorphic.dayschool-active .dayschool-card-header-hackathon { background-color: #ffedd5; } /* Orange-100 */
+        .theme-neumorphic.dayschool-active .dayschool-card-header-lecture { background-color: #f3e8ff; } /* Purple-100 */
+
+        /* Header Colors (Glass) - NEW Type-based colors */
+        .theme-glass.dayschool-active .dayschool-card-header-course { background-color: #1e40af; } /* Blue-800 */
+        .theme-glass.dayschool-active .dayschool-card-header-hackathon { background-color: #9a3412; } /* Orange-800 */
+        .theme-glass.dayschool-active .dayschool-card-header-lecture { background-color: #6b21a8; } /* Purple-800 */
+
+
+        /* DaySchool AI Card (Neumorphic) */
+        .theme-neumorphic.dayschool-active .dayschool-ai-card { background-color: #fef3c7; border: 1px solid #fde68a; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
+        .theme-neumorphic.dayschool-active .dayschool-ai-card-title { color: #92400e; }
+        .theme-neumorphic.dayschool-active .dayschool-ai-rec-item { background-color: rgba(255, 255, 255, 0.5); }
+        .theme-neumorphic.dayschool-active .dayschool-ai-rec-title { color: #4b5563; }
+        .theme-neumorphic.dayschool-active .dayschool-ai-rec-reason { color: #6b7280; }
+        .theme-neumorphic.dayschool-active .dayschool-ai-tip-separator { border-color: #fde68a; }
+        .theme-neumorphic.dayschool-active .dayschool-ai-tip-text { color: #92400e; }
+
+
+        /* DaySchool AI Card (Glass) */
+        .theme-glass .dayschool-ai-card { background: linear-gradient(135deg, rgba(30, 64, 175, 0.3), rgba(107, 33, 168, 0.3)); border: 1px solid rgba(129, 140, 248, 0.3); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .theme-glass .dayschool-ai-card-title { color: #e0e7ff; }
+        .theme-glass .dayschool-ai-rec-item { background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .theme-glass .dayschool-ai-rec-title { color: #c7d2fe; }
+        .theme-glass .dayschool-ai-rec-reason { color: #a5b4fc; }
+        .theme-glass .dayschool-ai-tip-separator { border-color: rgba(129, 140, 248, 0.3); }
+        .theme-glass .dayschool-ai-tip-text { color: #e0e7ff; }
+        
+        /* --- NEW DaySchool Sortable Badge Styles --- */
+        .dayschool-badge-sortable {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            user-select: none; /* prevent text selection on fast clicks */
+        }
+        .dayschool-badge-sortable .sort-indicator {
+            display: inline-block;
+            margin-left: 4px;
+            opacity: 0;
+            width: 0;
+            transition: opacity 0.2s, width 0.2s;
+            font-size: 0.6rem;
+        }
+        .dayschool-badge-sortable.sort-active .sort-indicator {
+            opacity: 1;
+            width: auto;
+        }
+
+        /* Glass Theme */
+        .theme-glass .dayschool-badge-sortable {
+            border: 1px solid rgba(148, 163, 184, 0.3); /* slate-400/30 */
+            background-color: rgba(100, 116, 139, 0.2); /* slate-500/20 */
+            color: #d1d5db; /* slate-300 */
+        }
+        .theme-glass .dayschool-badge-sortable:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            border-color: rgba(56, 189, 248, 0.7);
+        }
+        .theme-glass .dayschool-badge-sortable:active {
+            transform: scale(0.98);
+            background-color: rgba(56, 189, 248, 0.2);
+        }
+        .theme-glass .dayschool-badge-sortable.sort-active {
+            border-color: #38bdf8;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+            color: #7dd3fc;
+        }
+
+        /* Neumorphic Theme */
+        .theme-neumorphic .dayschool-badge-sortable {
+            box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
+            background-color: #e0e5ec;
+            color: #4b5563; /* slate-600 */
+        }
+        .theme-neumorphic .dayschool-badge-sortable:hover {
+            transform: translateY(-2px);
+            box-shadow: 6px 6px 12px #a3b1c6, -6px -6px 12px #ffffff;
+        }
+        .theme-neumorphic .dayschool-badge-sortable:active {
+            box-shadow: inset 4px 4px 8px #a3b1c6, inset -4px -4px 8px #ffffff;
+            transform: translateY(0);
+        }
+        .theme-neumorphic .dayschool-badge-sortable.sort-active {
+            color: #2563eb; /* A distinct blue for active sort */
+            box-shadow: inset 4px 4px 8px #a3b1c6, inset -4px -4px 8px #ffffff;
+        }
+        .theme-neumorphic .dayschool-badge-sortable.sort-active .sort-indicator {
+             font-weight: bold;
+        }
+
+        /* Webtoon Theme */
+        .theme-webtoon .dayschool-badge-sortable {
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px #000;
+            background-color: #fff;
+            color: #000;
+        }
+        .theme-webtoon .dayschool-badge-sortable:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        .theme-webtoon .dayschool-badge-sortable:active {
+            transform: translate(0, 0);
+            box-shadow: 2px 2px 0px #000;
+        }
+        .theme-webtoon .dayschool-badge-sortable.sort-active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border-color: #1e40af;
+        }
+
+        /* --- Roadmap View Styles --- */
+        .roadmap-connector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 80px;
+        }
+        .roadmap-connector-line {
+            width: 4px;
+            height: 100%;
+        }
+        .theme-glass .roadmap-connector-line { background: linear-gradient(to bottom, #38bdf8, #818cf8, #c084fc); }
+        .theme-neumorphic .roadmap-connector-line { background-color: #d1d9e6; box-shadow: inset 1px 1px 2px #a3b1c6, inset -1px -1px 2px #ffffff;}
+        .theme-webtoon .roadmap-connector-line { border-left: 4px dashed #000; }
+
+        .stage-icon-wrapper {
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            margin-bottom: 1rem;
+        }
+        .theme-glass .stage-icon-wrapper { background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.2); }
+        .theme-neumorphic .stage-icon-wrapper { background-color: #e0e5ec; box-shadow: 8px 8px 16px #a3b1c6, -8px -8px 16px #ffffff;}
+        .theme-webtoon .stage-icon-wrapper { background-color: #fff; border: 3px solid #000; }
+
+        .roadmap-stage {
+            padding: 2rem;
+            border-radius: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .theme-glass .roadmap-stage { background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.7); }
+        .theme-neumorphic .roadmap-stage { background-color: #e0e5ec; box-shadow: 15px 15px 30px #a3b1c6, -15px -15px 30px #ffffff; }
+        .theme-webtoon .roadmap-stage { background-color: #fff8e1; border: 3px solid #000; box-shadow: 8px 8px 0px #000; }
+
+        /* --- Roadmap Project Quest Styles --- */
+        .project-quest-container {
+            width: 100%;
+            margin-top: 2.5rem;
+            padding-top: 2.5rem;
+            position: relative;
+        }
+        .theme-glass .project-quest-container {
+            border-top: 2px solid rgba(148, 163, 184, 0.2);
+            background: radial-gradient(ellipse at top, rgba(168, 85, 247, 0.1), transparent 70%);
+            padding: 2.5rem 2rem 2rem;
+            margin-top: 2rem;
+            border-radius: 1.5rem;
+        }
+        .theme-neumorphic .project-quest-container {
+            border-top: 1px solid #d1d9e6;
+            box-shadow: inset 4px 4px 8px #a3b1c6, inset -4px -4px 8px #ffffff;
+            padding: 2.5rem 2rem 2rem;
+            margin-top: 2rem;
+            border-radius: 1.5rem;
+        }
+        .theme-webtoon .project-quest-container {
+            border-top: 3px dashed #000;
+            margin-top: 3.5rem;
+            padding-top: 3.5rem;
+        }
+
+        .project-quest-title {
+            text-align: center;
+            font-size: 1.5rem;
+            line-height: 2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        .theme-glass .project-quest-title {
+            color: #d8b4fe;
+            text-shadow: 0 0 10px rgba(216, 180, 254, 0.7);
+        }
+        .theme-neumorphic .project-quest-title {
+            color: #7e22ce;
+            text-shadow: 1px 1px 2px #ffffff;
+        }
+        .theme-webtoon .project-quest-title {
+            background-color: #fcd34d;
+            color: #000;
+            padding: 0.5rem 1rem;
+            border: 3px solid #000;
+            border-radius: 0.75rem;
+            display: inline-block;
+            position: absolute;
+            top: -1.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .project-choices-grid {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .project-choices-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        /* --- Roadmap Persona Selection Styles --- */
+        .persona-card-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 1.5rem;
+        }
+        @media (min-width: 640px) {
+            .persona-card-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (min-width: 1024px) {
+            .persona-card-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (min-width: 1280px) {
+             .persona-card-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        .persona-card {
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .persona-card:hover {
+            transform: translateY(-8px);
+        }
+        .persona-card-icon {
+            font-size: 2.5rem;
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+        .persona-card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .persona-card-description {
+            font-size: 0.9rem;
+            flex-grow: 1;
+            margin-bottom: 1.5rem;
+            min-height: 60px;
+        }
+        .persona-card-button {
+            padding: 0.6rem 1.2rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        /* Glass Persona Card */
+        .theme-glass .persona-card {
+            background: rgba(4, 120, 87, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            backdrop-filter: blur(5px);
+        }
+        .theme-glass .persona-card:hover {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            background: rgba(4, 120, 87, 0.2);
+        }
+        .theme-glass .persona-card-title { color: #6ee7b7; }
+        .theme-glass .persona-card-description { color: #a7f3d0; }
+        .theme-glass .persona-card-button {
+            background-color: #10b981;
+            color: #ffffff;
+            border: 1px solid #34d399;
+        }
+        .theme-glass .persona-card-button:hover {
+            background-color: #059669;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.8);
+        }
+
+        /* Neumorphic Persona Card */
+        .theme-neumorphic .persona-card {
+            background-color: #e0e5ec;
+            box-shadow: 15px 15px 30px #a3b1c6, -15px -15px 30px #ffffff;
+        }
+        .theme-neumorphic .persona-card:hover {
+            box-shadow: 20px 20px 40px #a3b1c6, -20px -20px 40px #ffffff;
+        }
+        .theme-neumorphic .persona-card-title { color: #1e3a8a; }
+        .theme-neumorphic .persona-card-description { color: #475569; }
+        .theme-neumorphic .persona-card-button {
+            color: #1d4ed8;
+            box-shadow: 8px 8px 16px #a3b1c6, -8px -8px 16px #ffffff;
+        }
+        .theme-neumorphic .persona-card-button:hover {
+            box-shadow: 10px 10px 20px #a3b1c6, -10px -10px 20px #ffffff;
+        }
+         .theme-neumorphic .persona-card-button:active {
+            box-shadow: inset 8px 8px 16px #a3b1c6, inset -8px -8px 16px #ffffff;
+        }
+
+        /* Webtoon Persona Card */
+        .theme-webtoon .persona-card {
+            background-color: #e0f2fe; /* Light blue */
+            border: 3px solid #000;
+            box-shadow: 8px 8px 0px #000;
+        }
+        .theme-webtoon .persona-card:hover {
+            box-shadow: 10px 10px 0px #0ea5e9;
+            border-color: #0ea5e9;
+        }
+        .theme-webtoon .persona-card-title { color: #0c4a6e; }
+        .theme-webtoon .persona-card-description { color: #075985; }
+        .theme-webtoon .persona-card-button {
+            background-color: #38bdf8;
+            color: #ffffff;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+        }
+        .theme-webtoon .persona-card-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #000;
+        }
+        
+        /* --- BaseCode View Styles --- */
+        .basecode-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            overflow: hidden;
+        }
+        .theme-glass .basecode-card {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+        }
+        .theme-glass .basecode-card:hover {
+             border-color: #4b5563;
+             transform: translateY(-2px);
+        }
+        .theme-neumorphic .basecode-card {
+            background-color: #ffffff;
+            border: 1px solid #e0e5ec;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            border-radius: 12px;
+        }
+        .theme-neumorphic .basecode-card:hover {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+            border-color: #c0c8d4;
+            transform: translateY(-2px);
+        }
+        .theme-webtoon .basecode-card {
+            background-color: #f8f9fa;
+            border: 2px solid #000;
+            border-radius: 8px;
+            box-shadow: 4px 4px 0px #000;
+        }
+        .theme-webtoon .basecode-card:hover {
+            box-shadow: 6px 6px 0px #000;
+            transform: translate(-2px, -2px);
+        }
+
+        .basecode-card-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border-bottom: 1px solid;
+        }
+        .theme-glass .basecode-card-header { border-color: #374151; color: #d1d5db; }
+        .theme-neumorphic .basecode-card-header { border-color: #e0e5ec; color: #4a5568; }
+        .theme-webtoon .basecode-card-header { border-color: #000; border-bottom-width: 2px; color: #fff; }
+
+        /* BaseCode Category Colors */
+        .theme-glass .category-생성AI { background-color: #5b21b6; } /* Violet */
+        .theme-glass .category-NLP { background-color: #1d4ed8; } /* Blue */
+        .theme-glass .category-정형 { background-color: #9a3412; } /* Orange */
+        .theme-glass .category-비전 { background-color: #047857; } /* Emerald */
+        .theme-glass .category-데이터분석 { background-color: #be123c; } /* Rose */
+        .theme-glass .category-전처리 { background-color: #4a5568; } /* Slate */
+
+        .theme-neumorphic .category-생성AI { background-color: #f3e8ff; } /* Violet */
+        .theme-neumorphic .category-NLP { background-color: #dbeafe; } /* Blue */
+        .theme-neumorphic .category-정형 { background-color: #ffedd5; } /* Orange */
+        .theme-neumorphic .category-비전 { background-color: #d1fae5; } /* Emerald */
+        .theme-neumorphic .category-데이터분석 { background-color: #ffe4e6; } /* Rose */
+        .theme-neumorphic .category-전처리 { background-color: #e2e8f0; } /* Slate */
+
+        .theme-webtoon .category-생성AI { background-color: #a855f7; } /* Violet */
+        .theme-webtoon .category-NLP { background-color: #3b82f6; } /* Blue */
+        .theme-webtoon .category-정형 { background-color: #f97316; } /* Orange */
+        .theme-webtoon .category-비전 { background-color: #10b981; } /* Emerald */
+        .theme-webtoon .category-데이터분석 { background-color: #f43f5e; } /* Rose */
+        .theme-webtoon .category-전처리 { background-color: #64748b; } /* Slate */
+
+        /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
             height: 4px;
-            width: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
             background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: var(--text-secondary);
+            background-color: rgba(148, 163, 184, 0.4);
             border-radius: 4px;
         }
-
-        /* Animations */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .theme-neumorphic .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #c0c8d4;
         }
-        .animate-fadeInUp { animation: fadeInUp 0.4s ease-out forwards; }
+        .theme-webtoon .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #adb5bd;
+        }
+
+        /* Hide scrollbar on Firefox */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+        }
+        .theme-neumorphic .custom-scrollbar {
+            scrollbar-color: #c0c8d4 transparent;
+        }
+        .theme-webtoon .custom-scrollbar {
+            scrollbar-color: #adb5bd transparent;
+        }
+
     </style>
 <script type="importmap">
 {

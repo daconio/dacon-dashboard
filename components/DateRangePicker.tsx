@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import type { Theme } from '../types';
+
+type Theme = 'glass' | 'neumorphic' | 'webtoon';
 
 interface DateRange {
     start: string | null;
@@ -84,8 +85,8 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, them
     }, [value]);
 
     const isDateSet = value.start || value.end;
-    const isGlass = theme === 'dark';
-    const isNeumorphic = theme === 'light';
+    const isGlass = theme === 'glass';
+    const isNeumorphic = theme === 'neumorphic';
 
     const buttonClasses = isGlass
         ? `inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-semibold transition-all duration-200 border ${
